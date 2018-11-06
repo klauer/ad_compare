@@ -67,10 +67,10 @@ def summarize_record_info(db_text):
         info = [f'RTYP {item.rtype}']
         for field_name, field in sorted(item.fields.items()):
             value = strip_quotes(field.value)
-            info.append(f'{field_name} f{value}')
+            info.append(f'{field_name} {value}')
         for field_name, field in sorted(item.info.items()):
             value = strip_quotes(field.value)
-            info.append(f'INFO: {field_name} f{value}')
+            info.append(f'INFO: {field_name} {value}')
 
         record_info[pvname] = '\n'.join(info)
 
@@ -170,4 +170,4 @@ def main(comparison_fn):
 
 
 if __name__ == '__main__':
-    main('index.html')
+    main('docs/index.html')
