@@ -1,3 +1,4 @@
+import os
 import pathlib
 import pandas as pd
 from recordwhat.parsers.db_parsimonious import dbWalker, db_grammar
@@ -24,33 +25,50 @@ versions = [
 ]
 
 
-filenames = [
-    'ADBase.template',
-    'ADPrefixes.template',
-    'NDColorConvert.template',
-    'NDFile.template',
-    'NDFileHDF5.template',
-    'NDFileJPEG.template',
-    'NDFileMagick.template',
-    'NDFileNetCDF.template',
-    'NDFileNexus.template',
-    'NDFileTIFF.template',
-    'NDOverlay.template',
-    'NDOverlayN.template',
-    'NDPluginBase.template',
-    'NDProcess.template',
-    'NDROI.template',
-    'NDROI_sync.template',
-    'NDStats.template',
-    'NDStdArrays.template',
-    'NDTransform.template',
+grouped_filenames = [
+    ('ADBase.template', 'NDArrayBase.template'),
 ]
+
+skipped_filenames = set(
+    # TODO: new (?) include syntax
+    ('NDROIStat8.template',
+     )
+)
 
 
 simple_changes = [
     ('$(ADDR)', '$(ADDR=0)'),
     ('$(TIMEOUT)', '$(TIMEOUT=1)'),
 ]
+
+header = '''
+<html>
+<head>
+<style>
+table {
+    border-collapse: collapse;
+    width: 100%;
+}
+
+th, td {
+    text-align: center;
+    padding: 8px;
+}
+
+tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+</style>
+</head>
+<body>
+<h1>Notes</h1>
+This compares what PVs are available from each version of AreaDetector.<br/>
+<br/>
+Special meanings:<br/>
+NO - PV does not exist in the specific version<br/>
+"-" - PV is the same as the previous version<br/>
+<h1>Index</h1>
+'''
 
 
 def summarize_record_info(db_text):
@@ -89,7 +107,7 @@ def preprocess(db_text):
     for line in db_text.split('\n'):
         line = line.strip()
         if line.startswith('field(') or line.startswith('info('):
-            orig_line = line
+            # orig_line = line
             field, value = line.split(',', 1)
             start, field = field.split('(', 1)
             field = field.strip('"')
@@ -106,23 +124,29 @@ def preprocess(db_text):
     return '\n'.join(lines)
 
 
-def compare(fn, *, ignore_simple_changes=True):
+def compare(fns, *, ignore_simple_changes=True):
     version_info = {}
     for version in versions:
-        full_fn = pathlib.Path(version) / 'ADApp/Db' / fn
-        print(full_fn)
-        try:
-            with open(full_fn) as f:
-                db_text = f.read()
-        except FileNotFoundError:
-            version_info[version] = {}
+        db_text = []
+        for fn in fns:
+            full_fn = pathlib.Path(version) / 'ADApp/Db' / fn
+            print(full_fn)
+            try:
+                with open(full_fn) as f:
+                    db_text.append(f.read())
+            except FileNotFoundError:
+                version_info[version] = {}
+
+        db_text = '\n'.join(db_text)
+        if not db_text:
             continue
 
         db_text = preprocess(db_text)
         version_info[version] = summarize_record_info(db_text)
 
     df = pd.DataFrame.from_dict(version_info)
-    df = df.fillna('n/a')
+    missing = 'NO'
+    df = df.fillna(missing)
 
     for pvname in df.index:
         initial_value = df.at[pvname, versions[0]]
@@ -133,10 +157,10 @@ def compare(fn, *, ignore_simple_changes=True):
                 value = undo_changes(value, simple_changes)
 
             if value == initial_value:
-                if initial_value == 'n/a':
-                    df.at[pvname, version] = 'n/a'
+                if initial_value == missing:
+                    df.at[pvname, version] = missing
                 else:
-                    df.at[pvname, version] = 'same'
+                    df.at[pvname, version] = '-'
             elif value.startswith(initial_value):
                 df.at[pvname, version] = 'added:\n' + value[len(initial_value):]
                 initial_value = value
@@ -146,8 +170,28 @@ def compare(fn, *, ignore_simple_changes=True):
     return df
 
 
+def find_templates():
+    ignore = set(fn
+                 for fns in grouped_filenames
+                 for fn in fns)
+    ignore = ignore.union(skipped_filenames)
+
+    fns = set()
+    for version in versions:
+        version_fns = [fn for fn in
+                       os.listdir(pathlib.Path(version) / 'ADApp/Db')
+                       if fn.endswith('.template')]
+
+        for fn in version_fns:
+            print(fn, ignore)
+            if fn not in ignore:
+                fns.add(fn)
+
+    return grouped_filenames + list([fn] for fn in sorted(fns))
+
+
 def html_formatter(s):
-    return s.replace('\n', '<br>')
+    return s.replace('\n', '<br/>')
 
 
 def main(comparison_fn):
@@ -155,15 +199,23 @@ def main(comparison_fn):
     pd.set_option('display.max_colwidth', -1)
 
     with open(comparison_fn, 'wt') as f:
-        print(f'<html><head></head>', file=f)
-        print(f'<body>', file=f)
-        for fn in filenames:
-            df = compare(fn)
+        print(header, file=f)
+
+        def title_from_fns(fns):
+            return ' + '.join(fns)
+
+        for idx, fns in enumerate(find_templates()):
+            title = title_from_fns(fns)
+            print(f'<li><a href="#{idx}">{title}</li>', file=f)
+
+        for idx, fns in enumerate(find_templates()):
+            df = compare(fns)
             html_comparison = df.to_html(
                 formatters=[html_formatter] * len(versions),
                 escape=False)
 
-            print(f'<h1>{fn}</h1>', file=f)
+            title = title_from_fns(fns)
+            print(f'<h1><a name={idx}>{title}</a></h1>', file=f)
             print(html_comparison, file=f)
         print(f'</body>', file=f)
     pd.set_option('display.max_colwidth', old_width)
