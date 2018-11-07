@@ -30,7 +30,7 @@ grouped_filenames = [
 ]
 
 skipped_filenames = set(
-    # TODO: new (?) include syntax
+    # TODO: new (?) "substitute" syntax
     ('NDROIStat8.template',
      )
 )
@@ -126,10 +126,12 @@ def preprocess(db_text):
 
 def compare(fns, *, ignore_simple_changes=True):
     version_info = {}
+    if isinstance(fns, str):
+        fns = (fns, )
     for version in versions:
         db_text = []
         for fn in fns:
-            full_fn = pathlib.Path(version) / 'ADApp/Db' / fn
+            full_fn = pathlib.Path(version) / 'ADApp' / 'Db' / fn
             print(full_fn)
             try:
                 with open(full_fn) as f:
@@ -162,7 +164,8 @@ def compare(fns, *, ignore_simple_changes=True):
                 else:
                     df.at[pvname, version] = '-'
             elif value.startswith(initial_value):
-                df.at[pvname, version] = 'added:\n' + value[len(initial_value):]
+                df.at[pvname, version] = ('added:\n' +
+                                          value[len(initial_value):])
                 initial_value = value
             else:
                 initial_value = value
@@ -178,9 +181,11 @@ def find_templates():
 
     fns = set()
     for version in versions:
-        version_fns = [fn for fn in
-                       os.listdir(pathlib.Path(version) / 'ADApp/Db')
-                       if fn.endswith('.template')]
+        version_fns = [
+            fn for fn in
+            os.listdir(pathlib.Path(version) / 'ADApp' / 'Db')
+            if fn.endswith('.template')
+        ]
 
         for fn in version_fns:
             print(fn, ignore)
