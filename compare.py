@@ -39,6 +39,8 @@ skipped_filenames = set(
 simple_changes = [
     ('$(ADDR)', '$(ADDR=0)'),
     ('$(TIMEOUT)', '$(TIMEOUT=1)'),
+    ('PINI NO', 'PINI YES'),
+    ('PINI YES', 'PINI NO'),
 ]
 
 header = '''
@@ -164,8 +166,9 @@ def compare(fns, *, ignore_simple_changes=True):
                 else:
                     df.at[pvname, version] = '-'
             elif value.startswith(initial_value):
-                df.at[pvname, version] = ('added:\n' +
-                                          value[len(initial_value):])
+                df.at[pvname, version] = (
+                    'added:\n' + value[len(initial_value):].strip('\n ')
+                )
                 initial_value = value
             else:
                 initial_value = value
