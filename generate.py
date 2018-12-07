@@ -1,31 +1,33 @@
+import os
 import re
-import inspect
 import collections
 
 from ophyd.areadetector import plugins
-from ophyd.areadetector.util import (StubInfo, EpicsSignalWithRBV)
+from ophyd.areadetector.util import EpicsSignalWithRBV
 from compare import compare
 
 # for R1-9-1 if existing class, verify that all PVs are there and that's it
 
 
-mbbi_value_to_string = {'ZRVL': 'ZRST',
-                        'ONVL': 'ONST',
-                        'TWVL': 'TWST',
-                        'THVL': 'THST',
-                        'FRVL': 'FRST',
-                        'FVVL': 'FVST',
-                        'SXVL': 'SXST',
-                        'SVVL': 'SVST',
-                        'EIVL': 'EIST',
-                        'NIVL': 'NIST',
-                        'TEVL': 'TEST',
-                        'ELVL': 'ELST',
-                        'TVVL': 'TVST',
-                        'TTVL': 'TTST',
-                        'FTVL': 'FTST',
-                        'FFVL': 'FFST',
-                        }
+mbbi_value_to_string = {
+    'ZRVL': 'ZRST',
+    'ONVL': 'ONST',
+    'TWVL': 'TWST',
+    'THVL': 'THST',
+    'FRVL': 'FRST',
+    'FVVL': 'FVST',
+    'SXVL': 'SXST',
+    'SVVL': 'SVST',
+    'EIVL': 'EIST',
+    'NIVL': 'NIST',
+    'TEVL': 'TEST',
+    'ELVL': 'ELST',
+    'TVVL': 'TVST',
+    'TTVL': 'TTST',
+    'FTVL': 'FTST',
+    'FFVL': 'FFST',
+}
+
 
 def _suffixes_from_device(devcls):
     '''Get all suffixes from a device, given its class'''
@@ -88,10 +90,13 @@ def get_prop_name(existing_class, pv):
         else:
             ret.append(s)
 
-    ret =  '_'.join(ret).lower()
+    ret = '_'.join(ret).lower()
     # TODO fixes
     end_fixes = {
         'v_al': '_val',
+        'xl_ink': 'xlink',
+        'yl_ink': 'ylink',
+        'zl_ink': 'zlink',
     }
 
     for from_, to in end_fixes.items():
@@ -165,9 +170,10 @@ def group_with_rbv(records, existing_class):
     return list(info.items())
 
 
-def get_class_name(existing_class, version):
+def get_class_name(existing_class, version, fn):
     if existing_class in (plugins.PluginBase, plugins.FilePlugin):
-        existing_name = 'Todo'
+        if fn.startswith('ND'):
+            existing_name = fn[2:].replace('.template', 'Plugin')
     else:
         existing_name = existing_class.__name__
 
@@ -176,6 +182,69 @@ def get_class_name(existing_class, version):
 
     version = version.replace('-', '').lstrip('R')
     return f'{existing_name}_V{version}'
+
+
+def get_hierarchy_info(df, existing_class, version, last_info, record,
+                       rbv_info):
+    HierarchyInfo = collections.namedtuple('HierarchyInfo', 'record info rbv')
+
+    if isinstance(record, tuple):
+        group_name, *group_records = record
+        group_name = renames.get(group_name, group_name)
+        rinfo = df.at[group_records[0], version]
+        existing_in_base = [check_if_exists(existing_class, rec)
+                            for rec in group_records]
+        if any(existing_in_base):
+            class_types = [item[-1] for item in existing_in_base
+                           if item is not None]
+            if all(existing_in_base) and len(set(class_types)) == 1:
+                print('ok', group_name, group_records,
+                      set(class_types))
+            else:
+                print('our groups:', group_records)
+                print('what is in base class')
+                for i, item in enumerate(existing_in_base):
+                    print('\t', i, item)
+                print('class types:', class_types)
+                raise ValueError(f'match some not all')
+
+        prop_name = get_prop_name(existing_class, group_name)
+        prop_name = renames.get(prop_name, prop_name)
+
+    else:
+        rinfo = df.at[record, version]
+        prop_name = get_prop_name(existing_class, record)
+
+    if rinfo == 'NO':
+        if last_info is None:
+            # does not exist yet
+            return
+        elif last_info.info == 'NO':
+            # last one was also NO - ignore
+            return
+        elif 'REMOVED' in last_info.info:
+            # removed in last version, no need to propagate
+            return
+        else:
+            # newly removed
+            return HierarchyInfo(
+                record,
+                f'{prop_name} = None  # REMOVED {record}',
+                rbv_info)
+    elif rinfo == '-' or rinfo.startswith('added'):
+        return None
+        # hier_info = HierarchyInfo(
+        #     record,
+        #     f'# {prop_name} ({record}) from parent',
+        #     rbv_info
+        # )
+    elif last_info and last_info.rbv != rbv_info:
+        return HierarchyInfo(
+            record,
+            f'# !! {record} RBV changed',
+            rbv_info)
+    else:
+        return HierarchyInfo(record, rinfo, rbv_info)
 
 
 def find_per_version_records(existing_class, fn, renames):
@@ -187,97 +256,11 @@ def find_per_version_records(existing_class, fn, renames):
                            for version in versions
                            }
 
-    HierarchyInfo = collections.namedtuple('HierarchyInfo', 'record info rbv')
-
     for record, rbv_info in group_with_rbv(records, existing_class):
         last_info = None
         for version in versions:
-            if isinstance(record, tuple):
-                group_name, *group_records = record
-                group_name = renames.get(group_name, group_name)
-                rinfo = df.at[group_records[0], version]
-                existing_in_base = [check_if_exists(existing_class, rec)
-                                    for rec in group_records]
-                if any(existing_in_base):
-                    class_types = [item[-1] for item in existing_in_base
-                                   if item is not None]
-                    if all(existing_in_base) and len(set(class_types)) == 1:
-                        print('ok', group_name, group_records,
-                              set(class_types))
-                    else:
-                        print('our groups:', group_records)
-                        print('what is in base class')
-                        for i, item in enumerate(existing_in_base):
-                            print('\t', i, item)
-                        print('class types:', class_types)
-                        raise ValueError(f'match some not all')
-
-                prop_name = get_prop_name(existing_class, group_name)
-                prop_name = renames.get(prop_name, prop_name)
-
-                if rinfo == 'NO':
-                    if last_info is None:
-                        # does not exist yet
-                        hier_info = None
-                    elif last_info.info == 'NO':
-                        # last one was also NO - ignore
-                        hier_info = None
-                    elif 'REMOVED' in last_info.info:
-                        # removed in last version, no need to propagate
-                        hier_info = None
-                    else:
-                        # newly removed
-                        hier_info = HierarchyInfo(
-                            record,
-                            f'{prop_name} = None  # REMOVED {record}',
-                            rbv_info)
-                elif rinfo == '-' or rinfo.startswith('added'):
-                    hier_info = None
-                    # hier_info = HierarchyInfo(
-                    #     record,
-                    #     f'# {prop_name} ({record}) from parent',
-                    #     rbv_info
-                    # )
-                elif last_info and last_info.rbv != rbv_info:
-                    hier_info = HierarchyInfo(
-                        record,
-                        f'# !! {record} RBV changed',
-                        rbv_info)
-                else:
-                    hier_info = HierarchyInfo(record, rinfo, rbv_info)
-            else:
-                rinfo = df.at[record, version]
-                prop_name = get_prop_name(existing_class, record)
-                if rinfo == 'NO':
-                    if last_info is None:
-                        # does not exist yet
-                        hier_info = None
-                    elif last_info.info == 'NO':
-                        # last one was also NO - ignore
-                        hier_info = None
-                    elif 'REMOVED' in last_info.info:
-                        # removed in last version, no need to propagate
-                        hier_info = None
-                    else:
-                        # newly removed
-                        hier_info = HierarchyInfo(
-                            record,
-                            f'{prop_name} = None  # REMOVED {record}',
-                            rbv_info)
-                elif rinfo == '-' or rinfo.startswith('added'):
-                    hier_info = None
-                    # hier_info = HierarchyInfo(
-                    #     record,
-                    #     f'# {prop_name} ({record}) from parent',
-                    #     rbv_info
-                    # )
-                elif last_info and last_info.rbv != rbv_info:
-                    hier_info = HierarchyInfo(
-                        record,
-                        f'# !! {record} RBV changed',
-                        rbv_info)
-                else:
-                    hier_info = HierarchyInfo(record, rinfo, rbv_info)
+            hier_info = get_hierarchy_info(df, existing_class, version,
+                                           last_info, record, rbv_info)
 
             if hier_info is not None:
                 per_version_records[version][hier_info.record] = hier_info
@@ -289,7 +272,7 @@ def find_per_version_records(existing_class, fn, renames):
             continue
 
         print()
-        class_name = get_class_name(existing_class, version)
+        class_name = get_class_name(existing_class, version, fn)
         for name, item in records.items():
             print(version, class_name, item.record, item.rbv,
                   item.info.replace('\n', '|')[:])
@@ -301,18 +284,24 @@ def split_back(rinfo):
     ret = {}
     for line in lines:
         line = line.strip()
-        if line in ('-', 'NO'):
+        if ' ' not in line:
             continue
         key, value = line.split(' ', 1)
         ret[key] = value
     return ret
 
 
-def run(existing_class, fn, renames, output_f):
+def run(existing_class, fn, renames, output_file, include_header=True):
     class_map = {
         'only_rbv': 'EpicsSignalRO',
         'no_rbv': 'EpicsSignal',
         'with_rbv': 'SignalWithRBV',
+    }
+
+    ddc_groups = {
+        'EpicsSignal': 'DDC_EpicsSignal',
+        'EpicsSignalRO': 'DDC_EpicsSignalRO',
+        'SignalWithRBV': 'DDC_SignalWithRBV',
     }
 
     per_version_records = find_per_version_records(existing_class, fn, renames)
@@ -320,10 +309,32 @@ def run(existing_class, fn, renames, output_f):
         parent_class = existing_class.__name__
     else:
         parent_class = 'PluginBase'
-    print(f'from ophyd import (Component as Cpt, DynamicDeviceComponent as DDC)', file=output_f)
-    print(f'from ophyd import (EpicsSignal, EpicsSignalRO)', file=output_f)
-    print(f'from ophyd.areadetector.plugins import {parent_class}', file=output_f)
-    print(f'from ophyd.areadetector.base import (EpicsSignalWithRBV as SignalWithRBV, ad_group)', file=output_f)
+
+    print(f'# --- {fn} ---', file=output_file)
+
+    if include_header:
+        print('''\
+from ophyd import (Component as Cpt, DynamicDeviceComponent as DDC,
+                   EpicsSignal, EpicsSignalRO)
+from ophyd.areadetector.plugins import (
+    PluginBase, Overlay, ColorConvPlugin, FilePlugin, HDF5Plugin, ImagePlugin,
+    JPEGPlugin, MagickPlugin, NetCDFPlugin, NexusPlugin, OverlayPlugin,
+    ProcessPlugin, ROIPlugin, StatsPlugin, TIFFPlugin, TransformPlugin)
+from ophyd.areadetector import EpicsSignalWithRBV as SignalWithRBV, ad_group
+
+
+def DDC_EpicsSignal(*items, **kw):
+    return DDC(ad_group(EpicsSignal, items), **kw)
+
+
+def DDC_EpicsSignalRO(*items, **kw):
+    return DDC(ad_group(EpicsSignalRO, items), **kw)
+
+
+def DDC_SignalWithRBV(*items, **kw):
+    return DDC(ad_group(SignalWithRBV, items), **kw)
+
+''', file=output_file)
 
     for version, records in per_version_records.items():
         if all(r.info.startswith('#') for r in records.values()):
@@ -331,11 +342,11 @@ def run(existing_class, fn, renames, output_f):
             continue
 
         added = set()
-        print(file=output_f)
-        print(file=output_f)
+        print(file=output_file)
+        print(file=output_file)
 
-        class_name = get_class_name(existing_class, version)
-        print(f'class {class_name}({parent_class}):', file=output_f)
+        class_name = get_class_name(existing_class, version, fn)
+        print(f'class {class_name}({parent_class}):', file=output_file)
         string_info = ''
 
         for name, item in records.items():
@@ -350,27 +361,25 @@ def run(existing_class, fn, renames, output_f):
 
                 if '# REMOVED ' in item.info:
                     if prop_name not in added:
-                        print(f'    {prop_name} = None  # REMOVED DDC', file=output_f)
+                        print(f'    {prop_name} = None  # REMOVED DDC', file=output_file)
                     continue
 
                 added.add(prop_name)
+                group = ddc_groups[cls]
                 print(f'''\
-    {prop_name} = DDC(
-        ad_group(
-            {cls},
-            [''', file=output_f)
+    {prop_name} = {group}(
+            ''', file=output_file)
                 props = dict((rec, get_prop_name(None, rec))
                              for rec in records)
                 for i, (rec, prop_name) in enumerate(props.items()):
                     print(f'''\
              ({prop_name!r}, {rec!r}),''',
-                          file=output_f)
+                          file=output_file)
 
                 print(f'''\
-            ]),
             doc="{name[0]}",
             default_read_attrs={list(props.values())!r},
-            )''', file=output_f)
+            )''', file=output_file)
                 continue
 
             prop_name = get_prop_name(existing_class, item.record)
@@ -380,7 +389,7 @@ def run(existing_class, fn, renames, output_f):
                 if prop_name not in added:
                     # don't remove something we just added...
                     print(f'    {prop_name} = None  # REMOVED',
-                          file=output_f)
+                          file=output_file)
                 continue
 
             added.add(prop_name)
@@ -396,54 +405,81 @@ def run(existing_class, fn, renames, output_f):
                         options = '0={ZNAM!r} 1={ONAM!r}'.format(**dinfo)
                     except KeyError:
                         options = ''
+                    options = options.replace('"', "'")
                     string_info = f', string=True, doc="{options}"'
                 elif rtyp in ('mbbi', 'mbbo'):
                     options = ['{}={!r}'.format(dinfo.get(v), dinfo.get(s))
                                for v, s in mbbi_value_to_string.items()
                                if v in dinfo and s in dinfo]
                     options = ' '.join(options)
+                    options = options.replace('"', "'")
                     string_info = f', string=True, \n            doc="{options}"'
 
             print(f'    {prop_name} = {cpt_class}({cls}, {record!r}{string_info})',
-                  file=output_f)
+                  file=output_file)
 
         parent_class = class_name
 
 
 
-base_renames = {'type': 'types'}
-with open('test.py', 'wt') as f:
-    # run(plugins.ROIPlugin, 'NDROI.template', base_renames, output_f=f)
-    # run(plugins.Overlay, 'NDOverlayN.template', base_renames, output_f=f)
-    # run(plugins.ImagePlugin, 'NDStdArrays.template', base_renames, output_f=f)
-    # rec = run(plugins.StatsPlugin, 'NDStats.template', base_renames, output_f=f)
-    # run(plugins.ColorConvPlugin, 'NDColorConvert.template', base_renames, output_f=f)
-    # run(plugins.ProcessPlugin, 'NDProcess.template', base_renames, output_f=f)
-    # run(plugins.Overlay, 'NDOverlayN.template', base_renames, output_f=f)
-    # run(plugins.OverlayPlugin, 'NDOverlay.template', base_renames, output_f=f)
-    # run(plugins.ROIPlugin, 'NDROI.template', base_renames, output_f=f)
-    # run(plugins.TransformPlugin, 'NDTransform.template', base_renames, output_f=f)
-    # run(plugins.FilePlugin, 'NDFile.template', base_renames, output_f=f)
-    # run(plugins.NetCDFPlugin, 'NDFileNetCDF.template', base_renames, output_f=f)
-    # run(plugins.TIFFPlugin, 'NDFileTIFF.template', base_renames, output_f=f)
-    # run(plugins.JPEGPlugin, 'NDFileJPEG.template', base_renames, output_f=f)
-    # run(plugins.NexusPlugin, 'NDFileNexus.template', base_renames, output_f=f)
-    # run(plugins.HDF5Plugin, 'NDFileHDF5.template', base_renames, output_f=f)
-    # run(plugins.MagickPlugin, 'NDFileMagick.template', base_renames, output_f=f)
-    # run(plugins.PluginBase, 'NDPva.template', base_renames, output_f=f)
-    # run(plugins.PluginBase, 'NDFFT.template', base_renames, output_f=f)
-    # run(plugins.PluginBase, 'NDScatter.template', base_renames, output_f=f)
-    # run(plugins.PluginBase, 'NDPosPlugin.template', base_renames, output_f=f)
-    # run(plugins.PluginBase, 'NDCircularBuff.template', base_renames, output_f=f)
-    # run(plugins.PluginBase, 'NDAttributeN.template', base_renames, output_f=f)
-    # run(plugins.PluginBase, 'NDAttrPlot.template', base_renames, output_f=f)
-    # run(plugins.PluginBase, 'NDTimeSeriesN.template', base_renames, output_f=f)
-    # run(plugins.PluginBase, 'NDTimeSeries.template', base_renames, output_f=f)
+base_renames = {'type': 'types',
+                'name': 'name_',
+                'trigger': 'trigger_',
+                'position': 'position_',
+                'l_evel': '_level',
+                }
+to_run = [
+    (plugins.ColorConvPlugin, 'NDColorConvert.template', base_renames),
+    (plugins.FilePlugin, 'NDFile.template', base_renames),
+    (plugins.HDF5Plugin, 'NDFileHDF5.template', base_renames),
+    (plugins.ImagePlugin, 'NDStdArrays.template', base_renames),
+    (plugins.JPEGPlugin, 'NDFileJPEG.template', base_renames),
+    (plugins.MagickPlugin, 'NDFileMagick.template', base_renames),
+    (plugins.NetCDFPlugin, 'NDFileNetCDF.template', base_renames),
+    (plugins.NexusPlugin, 'NDFileNexus.template', base_renames),
+    (plugins.Overlay, 'NDOverlayN.template', base_renames),
+    (plugins.OverlayPlugin, 'NDOverlay.template', base_renames),
+    (plugins.ProcessPlugin, 'NDProcess.template', base_renames),
+    (plugins.ROIPlugin, 'NDROI.template', base_renames),
+    (plugins.PluginBase, 'NDROIStat.template', base_renames),
+    (plugins.StatsPlugin, 'NDStats.template', base_renames),
+    (plugins.TIFFPlugin, 'NDFileTIFF.template', base_renames),
+    (plugins.TransformPlugin, 'NDTransform.template', base_renames),
+    (plugins.PluginBase, 'NDPva.template', base_renames),
+    (plugins.PluginBase, 'NDFFT.template', base_renames),
+    (plugins.PluginBase, 'NDScatter.template', base_renames),
+    (plugins.PluginBase, 'NDPosPlugin.template', base_renames),
+    (plugins.PluginBase, 'NDCircularBuff.template', base_renames),
+    (plugins.PluginBase, 'NDAttributeN.template', base_renames),
+    (plugins.PluginBase, 'NDAttrPlot.template', base_renames),
+    (plugins.PluginBase, 'NDTimeSeriesN.template', base_renames),
+    (plugins.PluginBase, 'NDTimeSeries.template', base_renames),
+    (plugins.PluginBase, 'NDCodec.template', base_renames),
+    # (plugins.PluginBase, 'NDEdge.template', base_renames),  # ?
+    ]
 
-    # failures:
-    # run(plugins.PluginBase, 'NDAttrPlotAttr.template', base_renames, output_f=f)
-    # run(plugins.PluginBase, 'NDAttrPlotData.template', base_renames, output_f=f)
-    # run(plugins.PluginBase, 'NDGatherN.template', base_renames, output_f=f)
 
-    # nothing:
-    # run(plugins.PluginBase, 'NDGather.template', base_renames, output_f=f)
+with open('all.py', 'wt') as f:
+    for idx, (base_plugin, template_fn, renames) in enumerate(to_run):
+        run(base_plugin, template_fn, base_renames, output_file=f,
+            include_header=(idx == 0))
+
+        print('', file=f)
+        print('', file=f)
+
+# for idx, (base_plugin, template_fn, renames) in enumerate(to_run):
+#     python_fn = template_fn.replace('template', 'py').lower()
+#     with open(python_fn, 'wt') as f:
+#         run(base_plugin, template_fn, base_renames, output_file=f,
+#             include_header=(idx == 0))
+
+# os.system(f'yapf -i {python_fn}')
+# os.system(f'autopep8 -i {python_fn}')
+
+# failures:
+# run(plugins.PluginBase, 'NDAttrPlotAttr.template', base_renames, output_file=f)
+# run(plugins.PluginBase, 'NDAttrPlotData.template', base_renames, output_file=f)
+# run(plugins.PluginBase, 'NDGatherN.template', base_renames, output_file=f)
+
+# nothing:
+# run(plugins.PluginBase, 'NDGather.template', base_renames, output_file=f)
