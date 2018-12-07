@@ -1,4 +1,5 @@
 import os
+import sys
 import re
 import collections
 
@@ -170,6 +171,14 @@ def group_with_rbv(records, existing_class):
     return list(info.items())
 
 
+def get_version_tuple(version):
+    return tuple(int(v) for v in version.lstrip('R').split('-'))
+
+
+def get_version_string(version):
+    return ''.join(str(s) for s in get_version_tuple(version))
+
+
 def get_class_name(existing_class, version, fn):
     if existing_class in (plugins.PluginBase, plugins.FilePlugin):
         if fn.startswith('ND'):
@@ -180,7 +189,7 @@ def get_class_name(existing_class, version, fn):
     if version == 'R1-9-1':
         return existing_name
 
-    version = version.replace('-', '').lstrip('R')
+    version = get_version_string(version)
     return f'{existing_name}_V{version}'
 
 
@@ -210,7 +219,6 @@ def get_hierarchy_info(df, existing_class, version, last_info, record,
 
         prop_name = get_prop_name(existing_class, group_name)
         prop_name = renames.get(prop_name, prop_name)
-
     else:
         rinfo = df.at[record, version]
         prop_name = get_prop_name(existing_class, record)
@@ -342,11 +350,19 @@ def DDC_SignalWithRBV(*items, **kw):
             continue
 
         added = set()
-        print(file=output_file)
-        print(file=output_file)
+
+        if version == 'R1-9-1':
+            f = sys.stdout
+        else:
+            f = output_file
+
+        print(file=f)
+        print(file=f)
 
         class_name = get_class_name(existing_class, version, fn)
-        print(f'class {class_name}({parent_class}):', file=output_file)
+        version_tuple = get_version_tuple(version)
+        print(f'class {class_name}({parent_class}, version={version_tuple}):',
+              file=f)
         string_info = ''
 
         for name, item in records.items():
@@ -361,25 +377,25 @@ def DDC_SignalWithRBV(*items, **kw):
 
                 if '# REMOVED ' in item.info:
                     if prop_name not in added:
-                        print(f'    {prop_name} = None  # REMOVED DDC', file=output_file)
+                        print(f'    {prop_name} = None  # REMOVED DDC', file=f)
                     continue
 
                 added.add(prop_name)
                 group = ddc_groups[cls]
                 print(f'''\
     {prop_name} = {group}(
-            ''', file=output_file)
+            ''', file=f)
                 props = dict((rec, get_prop_name(None, rec))
                              for rec in records)
                 for i, (rec, prop_name) in enumerate(props.items()):
                     print(f'''\
              ({prop_name!r}, {rec!r}),''',
-                          file=output_file)
+                          file=f)
 
                 print(f'''\
             doc="{name[0]}",
             default_read_attrs={list(props.values())!r},
-            )''', file=output_file)
+            )''', file=f)
                 continue
 
             prop_name = get_prop_name(existing_class, item.record)
@@ -389,7 +405,7 @@ def DDC_SignalWithRBV(*items, **kw):
                 if prop_name not in added:
                     # don't remove something we just added...
                     print(f'    {prop_name} = None  # REMOVED',
-                          file=output_file)
+                          file=f)
                 continue
 
             added.add(prop_name)
@@ -416,7 +432,7 @@ def DDC_SignalWithRBV(*items, **kw):
                     string_info = f', string=True, \n            doc="{options}"'
 
             print(f'    {prop_name} = {cpt_class}({cls}, {record!r}{string_info})',
-                  file=output_file)
+                  file=f)
 
         parent_class = class_name
 
@@ -455,17 +471,19 @@ to_run = [
     (plugins.PluginBase, 'NDTimeSeriesN.template', base_renames),
     (plugins.PluginBase, 'NDTimeSeries.template', base_renames),
     (plugins.PluginBase, 'NDCodec.template', base_renames),
+    (plugins.PluginBase, 'NDGather.template', base_renames),
     # (plugins.PluginBase, 'NDEdge.template', base_renames),  # ?
     ]
 
 
-with open('all.py', 'wt') as f:
-    for idx, (base_plugin, template_fn, renames) in enumerate(to_run):
-        run(base_plugin, template_fn, base_renames, output_file=f,
-            include_header=(idx == 0))
+if __name__ == '__main__':
+    with open('all.py', 'wt') as f:
+        for idx, (base_plugin, template_fn, renames) in enumerate(to_run):
+            run(base_plugin, template_fn, base_renames, output_file=f,
+                include_header=(idx == 0))
 
-        print('', file=f)
-        print('', file=f)
+            print('', file=f)
+            print('', file=f)
 
 # for idx, (base_plugin, template_fn, renames) in enumerate(to_run):
 #     python_fn = template_fn.replace('template', 'py').lower()
@@ -482,4 +500,3 @@ with open('all.py', 'wt') as f:
 # run(plugins.PluginBase, 'NDGatherN.template', base_renames, output_file=f)
 
 # nothing:
-# run(plugins.PluginBase, 'NDGather.template', base_renames, output_file=f)
