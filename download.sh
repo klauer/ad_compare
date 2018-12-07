@@ -14,3 +14,4 @@ git clone --single-branch --branch R3-2 --depth 1 https://github.com/areaDetecto
 git clone --single-branch --branch R3-3 --depth 1 https://github.com/areaDetector/ADCore     R3-3
 git clone --single-branch --branch R3-3-1 --depth 1 https://github.com/areaDetector/ADCore   R3-3-1 
 git clone --single-branch --branch R3-3-2 --depth 1 https://github.com/areaDetector/ADCore   R3-3-2 
+git clone --single-branch --branch R3-4 --depth 1 https://github.com/areaDetector/ADCore     R3-4

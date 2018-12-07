@@ -22,6 +22,7 @@ versions = [
     'R3-3',
     'R3-3-1',
     'R3-3-2',
+    'R3-4',
 ]
 
 
@@ -126,14 +127,23 @@ def preprocess(db_text):
     return '\n'.join(lines)
 
 
-def compare(fns, *, ignore_simple_changes=True):
+def compare(fns, *, ignore_simple_changes=True, ad_root=None,
+            template_path=None):
+    if ad_root is None:
+        ad_root = pathlib.Path('.')
+
+    if template_path is None:
+        template_path = pathlib.Path('ADApp') / 'Db'
+
     version_info = {}
     if isinstance(fns, str):
         fns = (fns, )
+
     for version in versions:
         db_text = []
+        # TODO checkout AD version
         for fn in fns:
-            full_fn = pathlib.Path(version) / 'ADApp' / 'Db' / fn
+            full_fn = ad_root / version / template_path / fn
             print(full_fn)
             try:
                 with open(full_fn) as f:
