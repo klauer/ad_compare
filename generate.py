@@ -2,6 +2,7 @@ import os
 import sys
 import re
 import collections
+import textwrap
 
 from ophyd.areadetector import plugins
 from ophyd.areadetector.util import EpicsSignalWithRBV
@@ -321,47 +322,62 @@ def run(existing_class, fn, renames, output_file, include_header=True):
     print(f'# --- {fn} ---', file=output_file)
 
     if include_header:
-        print('''\
-from ophyd import (Component as Cpt, DynamicDeviceComponent as DDC,
-                   EpicsSignal, EpicsSignalRO)
-from ophyd.areadetector.plugins import (
-    PluginBase, Overlay, ColorConvPlugin, FilePlugin, HDF5Plugin, ImagePlugin,
-    JPEGPlugin, MagickPlugin, NetCDFPlugin, NexusPlugin, OverlayPlugin,
-    ProcessPlugin, ROIPlugin, StatsPlugin, TIFFPlugin, TransformPlugin)
-from ophyd.areadetector import EpicsSignalWithRBV as SignalWithRBV, ad_group
-
-
-def DDC_EpicsSignal(*items, **kw):
-    return DDC(ad_group(EpicsSignal, items), **kw)
-
-
-def DDC_EpicsSignalRO(*items, **kw):
-    return DDC(ad_group(EpicsSignalRO, items), **kw)
-
-
-def DDC_SignalWithRBV(*items, **kw):
-    return DDC(ad_group(SignalWithRBV, items), **kw)
-
-''', file=output_file)
+        print(open('header.py', 'rt').read(), file=output_file)
 
     for version, records in per_version_records.items():
-        if all(r.info.startswith('#') for r in records.values()):
-            # print(version, 'is identical')
-            continue
-
-        added = set()
+        is_file_plugin = existing_class and issubclass(existing_class,
+                                                       plugins.FilePlugin)
+        is_base_plugin = existing_class and issubclass(existing_class,
+                                                       plugins.PluginBase)
+        version_tuple = get_version_tuple(version)
 
         if version == 'R1-9-1':
             f = sys.stdout
         else:
             f = output_file
 
+        class_name = get_class_name(existing_class, version, fn)
+
+        if all(r.info.startswith('#') for r in records.values()):
+            # print(version, 'is identical')
+            if is_file_plugin and version_tuple in [(2, 0), (2, 1), (2, 2)]:
+                ver_str = '{}{}'.format(*version_tuple)
+                print(f'class {class_name}({parent_class}, FilePlugin_V{ver_str}, version={version_tuple}):',
+                      file=f)
+                print(f'    ...', file=f)
+                parent_class = class_name
+            continue
+
+        added = set()
+
         print(file=f)
         print(file=f)
 
-        class_name = get_class_name(existing_class, version, fn)
-        version_tuple = get_version_tuple(version)
-        print(f'class {class_name}({parent_class}, version={version_tuple}):',
+        mixin = ''
+        if parent_class.startswith('Overlay', ):
+            ...
+        elif parent_class in ('FilePlugin', ):
+            if version_tuple == (2, 2):
+                parent_class = 'FilePlugin_V22'
+            elif version_tuple == (2, 1):
+                parent_class = 'FilePlugin_V21'
+            elif version_tuple == (2, 0):
+                parent_class = 'FilePlugin_V20'
+        elif parent_class in ('PluginBase', ):
+            if version_tuple == (2, 0):
+                parent_class = 'PluginBase_V20'
+        elif is_file_plugin:
+            if version_tuple == (2, 2):
+                mixin = ', FilePlugin_V22'
+            elif version_tuple == (2, 1):
+                mixin = ', FilePlugin_V21'
+            elif version_tuple == (2, 0):
+                mixin = ', FilePlugin_V20'
+        elif is_base_plugin or parent_class in ('Overlay', ) or parent_class.endswith('Plugin'):
+            if version_tuple >= (2, 0):
+                mixin = ', PluginBase_V20'
+
+        print(f'class {class_name}({parent_class}{mixin}, version={version_tuple}):',
               file=f)
         string_info = ''
 
@@ -383,8 +399,7 @@ def DDC_SignalWithRBV(*items, **kw):
                 added.add(prop_name)
                 group = ddc_groups[cls]
                 print(f'''\
-    {prop_name} = {group}(
-            ''', file=f)
+    {prop_name} = {group}(''', file=f)
                 props = dict((rec, get_prop_name(None, rec))
                              for rec in records)
                 for i, (rec, prop_name) in enumerate(props.items()):
@@ -446,7 +461,7 @@ base_renames = {'type': 'types',
                 }
 to_run = [
     (plugins.ColorConvPlugin, 'NDColorConvert.template', base_renames),
-    (plugins.FilePlugin, 'NDFile.template', base_renames),
+    # (plugins.FilePlugin, 'NDFile.template', base_renames),
     (plugins.HDF5Plugin, 'NDFileHDF5.template', base_renames),
     (plugins.ImagePlugin, 'NDStdArrays.template', base_renames),
     (plugins.JPEGPlugin, 'NDFileJPEG.template', base_renames),
@@ -477,7 +492,7 @@ to_run = [
 
 
 if __name__ == '__main__':
-    with open('all.py', 'wt') as f:
+    with open('all_plugins.py', 'wt') as f:
         for idx, (base_plugin, template_fn, renames) in enumerate(to_run):
             run(base_plugin, template_fn, base_renames, output_file=f,
                 include_header=(idx == 0))
