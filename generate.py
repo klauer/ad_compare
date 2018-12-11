@@ -1,6 +1,7 @@
 import os
 import sys
 import re
+import importlib
 import collections
 import textwrap
 
@@ -182,6 +183,13 @@ def get_version_string(version):
 
 def get_class_name(existing_class, version, fn):
     if existing_class in (plugins.PluginBase, plugins.FilePlugin):
+        if isinstance(fn, tuple):
+            if version == 'R1-9-1':
+                return 'PluginBasePlugin'
+            else:
+                version = get_version_string(version)
+                return 'PluginBasePlugin_V{}'.format(version)
+
         if fn.startswith('ND'):
             existing_name = fn[2:].replace('.template', 'Plugin')
     else:
@@ -202,6 +210,7 @@ def get_hierarchy_info(df, existing_class, version, last_info, record,
         group_name, *group_records = record
         group_name = renames.get(group_name, group_name)
         rinfo = df.at[group_records[0], version]
+        print('group records', group_records)
         existing_in_base = [check_if_exists(existing_class, rec)
                             for rec in group_records]
         if any(existing_in_base):
@@ -210,6 +219,8 @@ def get_hierarchy_info(df, existing_class, version, last_info, record,
             if all(existing_in_base) and len(set(class_types)) == 1:
                 print('ok', group_name, group_records,
                       set(class_types))
+            elif len(set(class_types)) == 1:
+                print('seems ok', group_name, group_records, set(class_types))
             else:
                 print('our groups:', group_records)
                 print('what is in base class')
@@ -257,17 +268,23 @@ def get_hierarchy_info(df, existing_class, version, last_info, record,
 
 
 def find_per_version_records(existing_class, fn, renames):
+    skip_versions = ('R3-3-1', 'R3-3-2')
     df = compare(fn)
     records = list(sorted(df.index))
     versions = df.columns
 
     per_version_records = {version: {}
                            for version in versions
+                           if version in df
+                           and version not in skip_versions
                            }
 
     for record, rbv_info in group_with_rbv(records, existing_class):
         last_info = None
         for version in versions:
+            if version in skip_versions:
+                continue
+
             hier_info = get_hierarchy_info(df, existing_class, version,
                                            last_info, record, rbv_info)
 
@@ -325,10 +342,6 @@ def run(existing_class, fn, renames, output_file, include_header=True):
         print(open('header.py', 'rt').read(), file=output_file)
 
     for version, records in per_version_records.items():
-        is_file_plugin = existing_class and issubclass(existing_class,
-                                                       plugins.FilePlugin)
-        is_base_plugin = existing_class and issubclass(existing_class,
-                                                       plugins.PluginBase)
         version_tuple = get_version_tuple(version)
 
         if version == 'R1-9-1':
@@ -338,97 +351,141 @@ def run(existing_class, fn, renames, output_file, include_header=True):
 
         class_name = get_class_name(existing_class, version, fn)
 
+        basic_name = class_name.split('Plugin')[0]
+        file_plugins = {'HDF5', 'JPEG', 'Magick', 'NetCDF', 'TIFF', 'Nexus'}
+
+        f.flush()
+        # terrible, terrible magic
+        generated_module = importlib.reload(importlib.import_module('all_plugins'))
+
+        mixin = ''
+        if 'NPlugin' in class_name:
+            if parent_class.startswith('PluginBase'):
+                parent_class = 'Device'
+                mixin = ''
+        elif not class_name.startswith('Overlay_'):
+            if basic_name in file_plugins:
+                potential_mixin = 'FilePlugin_V{}{}'.format(*version_tuple)
+                print(class_name, 'maybe mixing in', potential_mixin)
+            else:
+                potential_mixin = 'PluginBase_V{}{}'.format(*version_tuple)
+
+            if hasattr(generated_module, potential_mixin):
+                print(class_name, 'mixing in', potential_mixin)
+                mixin = potential_mixin
+
+        if parent_class.startswith('PluginBasePlugin'):
+            # TODO: just for PluginBase
+            if parent_class == 'PluginBasePlugin':
+                parent_class = 'PluginBase'
+            mixin = ''
+
+        if parent_class.startswith('PluginBase') and mixin.startswith('PluginBase'):
+            if parent_class < mixin:
+                parent_class = mixin
+
+            mixin = ''
+
+        bases = [getattr(generated_module, parent_class)
+                 if hasattr(generated_module, parent_class)
+                 else getattr(plugins, parent_class)]
+
+        print(bases)
+        if mixin.startswith('PluginBase_') and parent_class.startswith('FilePlugin_'):
+            mixin = ''
+            # mixin pluginbase is included by fileplugin
+        elif mixin:
+            bases.append(getattr(generated_module, mixin))
+            mixin = f', {mixin}'
+
+        added = set()
+        removed = set()
+
+        print(file=f)
+        print(file=f)
+
+        generated_class = type('GeneratedCls', tuple(bases), {})
+
+        if basic_name.startswith('Overlay_'):
+            version_of = ', version_of=Overlay'
+        else:
+            version_of = f', version_of={basic_name}Plugin'
+
         if all(r.info.startswith('#') for r in records.values()):
-            # print(version, 'is identical')
-            if is_file_plugin and version_tuple in [(2, 0), (2, 1), (2, 2)]:
-                ver_str = '{}{}'.format(*version_tuple)
-                print(f'class {class_name}({parent_class}, FilePlugin_V{ver_str}, version={version_tuple}):',
+            if mixin:
+                print(f'class {class_name}({parent_class}{mixin}, version={version_tuple}{version_of}):',
                       file=f)
-                print(f'    ...', file=f)
+                print('    ...', file=f)
                 parent_class = class_name
             continue
 
-        added = set()
-
-        print(file=f)
-        print(file=f)
-
-        mixin = ''
-        if parent_class.startswith('Overlay', ):
-            ...
-        elif parent_class in ('FilePlugin', ):
-            if version_tuple == (2, 2):
-                parent_class = 'FilePlugin_V22'
-            elif version_tuple == (2, 1):
-                parent_class = 'FilePlugin_V21'
-            elif version_tuple == (2, 0):
-                parent_class = 'FilePlugin_V20'
-        elif parent_class in ('PluginBase', ):
-            if version_tuple == (2, 0):
-                parent_class = 'PluginBase_V20'
-        elif is_file_plugin:
-            if version_tuple == (2, 2):
-                mixin = ', FilePlugin_V22'
-            elif version_tuple == (2, 1):
-                mixin = ', FilePlugin_V21'
-            elif version_tuple == (2, 0):
-                mixin = ', FilePlugin_V20'
-        elif is_base_plugin or parent_class in ('Overlay', ) or parent_class.endswith('Plugin'):
-            if version_tuple >= (2, 0):
-                mixin = ', PluginBase_V20'
-
-        print(f'class {class_name}({parent_class}{mixin}, version={version_tuple}):',
+        print(f'class {class_name}({parent_class}{mixin}, version={version_tuple}{version_of}):',
               file=f)
-        string_info = ''
 
+        string_info = ''
         for name, item in records.items():
             cls = class_map[item.rbv]
             if isinstance(item.record, tuple):
                 prop_name, *records = item.record
-                exists = check_if_exists(existing_class, records[0])
+                exists = check_if_exists(generated_class, records[0])
                 if exists:
                     # first PV of group is DDC in existing class - use that
                     # name
                     prop_name = exists[0]
 
-                if '# REMOVED ' in item.info:
-                    if prop_name not in added:
-                        print(f'    {prop_name} = None  # REMOVED DDC', file=f)
-                    continue
-
-                added.add(prop_name)
                 group = ddc_groups[cls]
-                print(f'''\
-    {prop_name} = {group}(''', file=f)
                 props = dict((rec, get_prop_name(None, rec))
                              for rec in records)
-                for i, (rec, prop_name) in enumerate(props.items()):
-                    print(f'''\
-             ({prop_name!r}, {rec!r}),''',
-                          file=f)
 
-                print(f'''\
-            doc="{name[0]}",
-            default_read_attrs={list(props.values())!r},
-            )''', file=f)
+                if '# REMOVED ' in item.info:
+                    if (prop_name not in added and
+                            getattr(generated_class, prop_name, None) is not None):
+                        print(f'    {prop_name} = None  # REMOVED DDC', file=f)
+                        removed.add(prop_name)
+                    continue
+
+                elif getattr(generated_class, prop_name, None) is not None:
+                    existing_cpt = getattr(generated_class, prop_name)
+                    if hasattr(existing_cpt, 'defn') and len(props) == len(existing_cpt.defn):
+                        continue
+                    else:
+                        print('    # Overriding {}={}'
+                              ''.format(prop_name, getattr(existing_cpt, 'defn', None)),
+                              file=f)
+
+                if prop_name in added:
+                    prop_name = prop_name + '_TODO'
+
+                added.add(prop_name)
+                print(f'    {prop_name} = {group}(', end='', file=f)
+                for i, (rec, prop_name) in enumerate(props.items()):
+                    print(f'({prop_name!r}, {rec!r}),', end='', file=f)
+
+                print(f'doc="{name[0]}")', file=f)
                 continue
 
-            prop_name = get_prop_name(existing_class, item.record)
+            prop_name = get_prop_name(generated_class, item.record)
             prop_name = renames.get(prop_name, prop_name)
 
             if '# REMOVED ' in item.info:
-                if prop_name not in added:
+                if (prop_name not in added and
+                        getattr(generated_class, prop_name, None) is not None):
                     # don't remove something we just added...
                     print(f'    {prop_name} = None  # REMOVED',
                           file=f)
+                    removed.add(prop_name)
                 continue
 
-            added.add(prop_name)
             cpt_class = 'Cpt'
             record = item.record
             dinfo = split_back(item.info)
             if 'RTYP' in dinfo:
                 rtyp = dinfo['RTYP']
+                def quote_if_necessary(s):
+                    if ' ' in s:
+                        return repr(s)
+                    return s
+
                 if rtyp in ('stringin', 'stringout'):
                     string_info = ', string=True'
                 elif rtyp in ('bi', 'bo'):
@@ -439,15 +496,43 @@ def run(existing_class, fn, renames, output_file, include_header=True):
                     options = options.replace('"', "'")
                     string_info = f', string=True, doc="{options}"'
                 elif rtyp in ('mbbi', 'mbbo'):
-                    options = ['{}={!r}'.format(dinfo.get(v), dinfo.get(s))
+                    options = ['{}={}'.format(dinfo.get(v), quote_if_necessary(dinfo.get(s)))
                                for v, s in mbbi_value_to_string.items()
                                if v in dinfo and s in dinfo]
                     options = ' '.join(options)
                     options = options.replace('"', "'")
-                    string_info = f', string=True, \n            doc="{options}"'
+                    string_info = f', string=True, doc="{options}"'
+                else:
+                    string_info = ''
 
-            print(f'    {prop_name} = {cpt_class}({cls}, {record!r}{string_info})',
+            if hasattr(generated_class, prop_name):
+                cpt = getattr(generated_class, prop_name)
+                if cpt.cls.__name__ == cls:
+                    ...
+                beginning = '# hmm: '
+            else:
+                beginning = ''
+                if prop_name in added:
+                    prop_name = prop_name + '_TODO'
+
+                added.add(prop_name)
+                if '$(' in record:
+                    record = record.replace('$(N)', '$(index)')
+                    record = record.replace('$(', '{self.')
+                    record = record.replace(')', '}')
+                    record = '{self.prefix}' + record
+                    cpt_class = 'FCpt'
+
+            print(f'    {beginning}{prop_name} = {cpt_class}({cls}, {record!r}{string_info})',
                   file=f)
+
+        if not added and not removed:
+            print('    ...', file=f)
+
+        if class_name == 'GatherNPlugin_V31':
+            print('    def __init__(self, *args, index, **kwargs):', file=f)
+            print('        self.index = index', file=f)
+            print('        super().__init__(*args, **kwargs)', file=f)
 
         parent_class = class_name
 
@@ -458,10 +543,17 @@ base_renames = {'type': 'types',
                 'trigger': 'trigger_',
                 'position': 'position_',
                 'l_evel': '_level',
+                'tsn_sec': 'ts_nsec',
+                'tss_ec': 'ts_sec',
+                'attr_name': 'attribute_name',
+                'flush_on_soft_trg': 'flush_on_soft_trigger',
+                'nd_array_address_n': 'gather_array_address',
+                'nd_array_port_n': 'gather_array_port',
                 }
 to_run = [
+# (plugins.PluginBase, ('NDPluginBase.template', 'NDArrayBase.template'), base_renames),
+# (plugins.FilePlugin, 'NDFile.template', base_renames),
     (plugins.ColorConvPlugin, 'NDColorConvert.template', base_renames),
-    # (plugins.FilePlugin, 'NDFile.template', base_renames),
     (plugins.HDF5Plugin, 'NDFileHDF5.template', base_renames),
     (plugins.ImagePlugin, 'NDStdArrays.template', base_renames),
     (plugins.JPEGPlugin, 'NDFileJPEG.template', base_renames),
@@ -473,6 +565,7 @@ to_run = [
     (plugins.ProcessPlugin, 'NDProcess.template', base_renames),
     (plugins.ROIPlugin, 'NDROI.template', base_renames),
     (plugins.PluginBase, 'NDROIStat.template', base_renames),
+    (plugins.PluginBase, 'NDROIStatN.template', base_renames),
     (plugins.StatsPlugin, 'NDStats.template', base_renames),
     (plugins.TIFFPlugin, 'NDFileTIFF.template', base_renames),
     (plugins.TransformPlugin, 'NDTransform.template', base_renames),
@@ -487,8 +580,9 @@ to_run = [
     (plugins.PluginBase, 'NDTimeSeries.template', base_renames),
     (plugins.PluginBase, 'NDCodec.template', base_renames),
     (plugins.PluginBase, 'NDGather.template', base_renames),
-    # (plugins.PluginBase, 'NDEdge.template', base_renames),  # ?
+    (plugins.PluginBase, 'NDGatherN.template', base_renames),
     ]
+# (plugins.PluginBase, 'NDEdge.template', base_renames),  # ?
 
 
 if __name__ == '__main__':
@@ -497,21 +591,22 @@ if __name__ == '__main__':
             run(base_plugin, template_fn, base_renames, output_file=f,
                 include_header=(idx == 0))
 
-            print('', file=f)
-            print('', file=f)
+            # print('', file=f)
+            # print('', file=f)
 
-# for idx, (base_plugin, template_fn, renames) in enumerate(to_run):
-#     python_fn = template_fn.replace('template', 'py').lower()
-#     with open(python_fn, 'wt') as f:
-#         run(base_plugin, template_fn, base_renames, output_file=f,
-#             include_header=(idx == 0))
-
-# os.system(f'yapf -i {python_fn}')
-# os.system(f'autopep8 -i {python_fn}')
-
-# failures:
-# run(plugins.PluginBase, 'NDAttrPlotAttr.template', base_renames, output_file=f)
-# run(plugins.PluginBase, 'NDAttrPlotData.template', base_renames, output_file=f)
-# run(plugins.PluginBase, 'NDGatherN.template', base_renames, output_file=f)
-
-# nothing:
+# # for idx, (base_plugin, template_fn, renames) in enumerate(to_run):
+# #     python_fn = template_fn.replace('template', 'py').lower()
+# #     with open(python_fn, 'wt') as f:
+# #         run(base_plugin, template_fn, base_renames, output_file=f,
+# #             include_header=(idx == 0))
+#
+# # os.system(f'yapf -i {python_fn}')
+# # os.system(f'autopep8 -i {python_fn}')
+#
+# # failures:
+# # run(plugins.PluginBase, 'NDAttrPlotAttr.template', base_renames, output_file=f)
+# # run(plugins.PluginBase, 'NDAttrPlotData.template', base_renames, output_file=f)
+# # run(plugins.PluginBase, 'NDGatherN.template', base_renames, output_file=f)
+#
+# # nothing:
+#

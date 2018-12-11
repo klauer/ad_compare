@@ -71,7 +71,7 @@ def generate_common_plugins(version):
         ver_string = get_version_string(version)
         ver_tuple = get_version_tuple(version)
 
-        code.append(f'class CommonPlugins_V{ver_string}(CommonPlugins, version={ver_tuple}):')
+        code.append(f'class CommonPlugins_V{ver_string}(CommonPlugins, version={ver_tuple}, version_of=CommonPlugins):')
         for suffix in sorted(suffixes):
             clsname = suffix_to_class[suffix.rstrip('1234567890')]
 
@@ -81,31 +81,42 @@ def generate_common_plugins(version):
                 available_names = [name for name in dir(all_plugins)
                                    if name.startswith(clsname)]
                 print(clsname, available_names)
-                plugin_cls = getattr(all_plugins, available_names[0])
+                try:
+                    plugin_cls = getattr(all_plugins, available_names[0])
+                except IndexError:
+                    code.append('    # TODO no classes available? {} {}'.format(version, suffix))
+                    continue
 
             all_versions = plugin_cls._device_versions_
-            clsversion = max(ver for ver in all_versions
-                             if ver <= ver_tuple)
-            print('versions', all_versions, clsversion)
-            clsversion = ''.join(str(v) for v in clsversion)
+            try:
+                clsversion = max(ver for ver in all_versions
+                                 if ver <= ver_tuple)
+            except ValueError:
+                if suffix not in ('Gather1', ):
+                    code.append('    # TODO unavailable: {} {}'.format(version, suffix))
+                    continue
+                clsversion = ''.join(str(v) for v in ver_tuple)
+            else:
+                print('versions', all_versions, clsversion)
+                clsversion = ''.join(str(v) for v in clsversion)
+
             if clsversion == '191':
                 clsversion = ''
             else:
                 clsversion = f'_V{clsversion}'
 
             if clsname.startswith('Overlay'):
-                if ver_tuple>= (3, 1):
-                    clsname, clsversion = 'OverlayPlugin', '_V31'
-                elif ver_tuple>= (2, 6):
-                    clsname, clsversion = 'OverlayPlugin', '_V26'
-                elif ver_tuple>= (2, 1):
-                    clsname, clsversion = 'OverlayPlugin', '_V21'
-                elif ver_tuple>= (2, 0):
-                    clsname, clsversion = 'OverlayPlugin', '_V20'
-                else:
-                    clsname, clsversion = 'OverlayPlugin', ''
+                clsname = 'OverlayPlugin'
+            elif clsname.startswith('AttributeNPlugin'):
+                clsname = 'AttributePlugin'
+            elif clsname.startswith('ROIStat'):
+                clsname = 'ROIStatPlugin'
 
-            code.append(f'    {suffix.lower()} = Cpt({clsname}{clsversion}, "{suffix}:")')
+            if 'Stats' in clsname and ver_tuple >= (3, 3):
+                args = ', configuration_attrs=[]'
+            else:
+                args = ''
+            code.append(f'    {suffix.lower()} = Cpt({clsname}{clsversion}, "{suffix}:"{args})')
 
     return '\n'.join(code)
 
@@ -139,75 +150,29 @@ suffix_to_class = {
     }
 
 
-with open('common_plugins.py', 'wt') as f:
-    print('''\
-from ophyd import (Device, Component as Cpt, DynamicDeviceComponent as DDC,
-                   EpicsSignal, EpicsSignalRO)
-from ophyd.areadetector.plugins import (
-    PluginBase, Overlay, ColorConvPlugin, FilePlugin, HDF5Plugin, ImagePlugin,
-    JPEGPlugin, MagickPlugin, NetCDFPlugin, NexusPlugin, OverlayPlugin,
-    ProcessPlugin, ROIPlugin, StatsPlugin, TIFFPlugin, TransformPlugin)
-from ophyd.areadetector import (ADBase, EpicsSignalWithRBV as SignalWithRBV, ad_group)
-from all_plugins import *
+def main():
+    with open('common_plugins.py', 'wt') as f:
+        print(open('common_plugins_header.py', 'rt').read(), file=f)
+        for version in versions[1:]:
+            if version in ('R3-3-1', 'R3-3-2'):
+                continue
+            print()
+            print()
+            common_plugin_code = generate_common_plugins(version)
+            print('', file=f)
+            print('', file=f)
+            print(common_plugin_code, file=f)
+            if version in ('R3-3', 'R3-4'):
+                vs = get_version_string(version)
+                print(f'    proc1_tiff = Cpt(TIFFPlugin_V{vs}, "Proc1:TIFF:")', file=f)
+                print(f'    stats1_ts = Cpt(TimeSeriesPlugin_V{vs}, "Stats1:TS:", configuration_attrs=[])', file=f)
+                print(f'    stats2_ts = Cpt(TimeSeriesPlugin_V{vs}, "Stats2:TS:", configuration_attrs=[])', file=f)
+                print(f'    stats3_ts = Cpt(TimeSeriesPlugin_V{vs}, "Stats3:TS:", configuration_attrs=[])', file=f)
+                print(f'    stats4_ts = Cpt(TimeSeriesPlugin_V{vs}, "Stats4:TS:", configuration_attrs=[])', file=f)
+                print(f'    stats5_ts = Cpt(TimeSeriesPlugin_V{vs}, "Stats5:TS:", configuration_attrs=[])', file=f)
 
 
-class OverlayPlugin_V20(OverlayPlugin, PluginBase_V20, version=(2, 0)):
-    overlay_1 = Cpt(Overlay, '1:')
-    overlay_2 = Cpt(Overlay, '2:')
-    overlay_3 = Cpt(Overlay, '3:')
-    overlay_4 = Cpt(Overlay, '4:')
-    overlay_5 = Cpt(Overlay, '5:')
-    overlay_6 = Cpt(Overlay, '6:')
-    overlay_7 = Cpt(Overlay, '7:')
-    overlay_8 = Cpt(Overlay, '8:')
-
-
-class OverlayPlugin_V21(OverlayPlugin, version=(2, 1)):
-    overlay_1 = Cpt(Overlay_V21, '1:')
-    overlay_2 = Cpt(Overlay_V21, '2:')
-    overlay_3 = Cpt(Overlay_V21, '3:')
-    overlay_4 = Cpt(Overlay_V21, '4:')
-    overlay_5 = Cpt(Overlay_V21, '5:')
-    overlay_6 = Cpt(Overlay_V21, '6:')
-    overlay_7 = Cpt(Overlay_V21, '7:')
-    overlay_8 = Cpt(Overlay_V21, '8:')
-
-
-class OverlayPlugin_V26(OverlayPlugin, version=(2, 1)):
-    overlay_1 = Cpt(Overlay_V26, '1:')
-    overlay_2 = Cpt(Overlay_V26, '2:')
-    overlay_3 = Cpt(Overlay_V26, '3:')
-    overlay_4 = Cpt(Overlay_V26, '4:')
-    overlay_5 = Cpt(Overlay_V26, '5:')
-    overlay_6 = Cpt(Overlay_V26, '6:')
-    overlay_7 = Cpt(Overlay_V26, '7:')
-    overlay_8 = Cpt(Overlay_V26, '8:')
-
-
-class OverlayPlugin_V31(OverlayPlugin, version=(3, 1)):
-    overlay_1 = Cpt(Overlay_V31, '1:')
-    overlay_2 = Cpt(Overlay_V31, '2:')
-    overlay_3 = Cpt(Overlay_V31, '3:')
-    overlay_4 = Cpt(Overlay_V31, '4:')
-    overlay_5 = Cpt(Overlay_V31, '5:')
-    overlay_6 = Cpt(Overlay_V31, '6:')
-    overlay_7 = Cpt(Overlay_V31, '7:')
-    overlay_8 = Cpt(Overlay_V31, '8:')
-
-
-class CommonPlugins(ADBase):
-    ...
-
-''', file=f)
-    for version in versions[1:]:
-        print()
-        print()
-        print(version)
-        common_plugin_code = generate_common_plugins(version)
-        print('', file=f)
-        print('', file=f)
-        print(common_plugin_code, file=f)
-
+main()
 
 # AttrPlotPlugin_V31
 # AttributeNPlugin_V22

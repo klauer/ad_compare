@@ -27,7 +27,7 @@ versions = [
 
 
 grouped_filenames = [
-    ('ADBase.template', 'NDArrayBase.template'),
+    ('NDArrayBase.template', 'NDPluginBase.template'),
 ]
 
 skipped_filenames = set(
@@ -104,11 +104,17 @@ def undo_changes(value, change_list):
     return value
 
 
-def preprocess(db_text):
+def preprocess(db_text, path):
     'Pre-process the DB text due to some failures in the grammar of recordwhat'
     lines = []
     for line in db_text.split('\n'):
         line = line.strip()
+        # if line.startswith('include '):
+        #     included_fn = line.split(' ', 1)[1].strip('"\'')
+        #     with open(path / included_fn, 'rt') as f:
+        #         lines.extend(preprocess(f.read(), path=path).split('\n'))
+        #     print(' ->', included_fn)
+        #     continue
         if line.startswith('field(') or line.startswith('info('):
             # orig_line = line
             field, value = line.split(',', 1)
@@ -149,22 +155,25 @@ def compare(fns, *, ignore_simple_changes=True, ad_root=None,
                 with open(full_fn) as f:
                     db_text.append(f.read())
             except FileNotFoundError:
-                version_info[version] = {}
+                # version_info[version] = {}
+                ...
 
         db_text = '\n'.join(db_text)
         if not db_text:
             continue
 
-        db_text = preprocess(db_text)
+        db_text = preprocess(db_text, path=ad_root / version / template_path)
         version_info[version] = summarize_record_info(db_text)
 
     df = pd.DataFrame.from_dict(version_info)
     missing = 'NO'
     df = df.fillna(missing)
 
+    available_versions = [version for version in versions
+                          if version in df]
     for pvname in df.index:
-        initial_value = df.at[pvname, versions[0]]
-        for version in versions[1:]:
+        initial_value = df.at[pvname, available_versions[0]]
+        for version in available_versions[1:]:
             value = df.at[pvname, version]
 
             if ignore_simple_changes:
