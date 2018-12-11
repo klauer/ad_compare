@@ -92,9 +92,10 @@ def generate_common_plugins(version):
                 clsversion = max(ver for ver in all_versions
                                  if ver <= ver_tuple)
             except ValueError:
-                if suffix not in ('Gather1', ):
-                    code.append('    # TODO unavailable: {} {}'.format(version, suffix))
-                    continue
+                # if suffix not in ('Gather1', ):
+                #     code.append('    # TODO unavailable: {} {}'.format(version, suffix))
+                #     continue
+                raise
                 clsversion = ''.join(str(v) for v in ver_tuple)
             else:
                 print('versions', all_versions, clsversion)
@@ -126,27 +127,28 @@ def check_coverage(cls):
 
 
 suffix_to_class = {
-    'Attr': 'AttributeNPlugin',
     'CB': 'CircularBuffPlugin',
     'Codec': 'CodecPlugin',
     'CC': 'ColorConvPlugin',
     'FFT': 'FFTPlugin',
     'HDF': 'HDF5Plugin',
-    'Gather': 'GatherPlugin',
     'Image': 'ImagePlugin',
     'JPEG': 'JPEGPlugin',
     'Magick': 'MagickPlugin',
     'netCDF': 'NetCDFPlugin',
     'Nexus': 'NexusPlugin',
-    'Over': 'Overlay',
     'Proc': 'ProcessPlugin',
     'Pva': 'PvaPlugin',
     'ROI': 'ROIPlugin',
-    'ROIStat': 'ROIStatPlugin',
     'Scatter': 'ScatterPlugin',
     'Stats': 'StatsPlugin',
     'TIFF': 'TIFFPlugin',
     'Trans': 'TransformPlugin',
+
+    'Over': 'CommonOverlayPlugin',
+    'Attr': 'CommonAttributePlugin',
+    'Gather': 'CommonGatherPlugin',
+    'ROIStat': 'CommonROIStatPlugin',
     }
 
 

@@ -64,11 +64,6 @@ class PluginBase_V22(PluginBase_V20, version=(2, 2), version_of=PluginBase):
         string=True,
         doc="0=Int8 1=UInt8 2=Int16 3=UInt16 4=Int32 5=UInt32 6=Float32 7=Float64",
     )
-    array_size_xyz = DDC_EpicsSignalRO(
-        ("array_size_x", "ArraySizeX_RBV"),
-        ("array_size_y", "ArraySizeY_RBV"),
-        ("array_size_z", "ArraySizeZ_RBV"),
-    )
 
 
 class PluginBase_V26(PluginBase_V22, version=(2, 6), version_of=PluginBase):
@@ -76,7 +71,7 @@ class PluginBase_V26(PluginBase_V22, version=(2, 6), version_of=PluginBase):
     driver_version = Cpt(EpicsSignalRO, "DriverVersion_RBV", string=True)
     execution_time = Cpt(EpicsSignalRO, "ExecutionTime_RBV", string=True)
     ndimensions = Cpt(SignalWithRBV, "NDimensions", string=True)
-    array_size_all = DDC_SignalWithRBV(
+    array_size_a = DDC_SignalWithRBV(
         ("array_size0", "ArraySize0"),
         ("array_size1", "ArraySize1"),
         ("array_size2", "ArraySize2"),
@@ -184,7 +179,7 @@ class ROIStatNPlugin(Device):
     ...
 
 
-class AttributePlugin(Device):
+class AttributePlugin(Device, version=(0, 0)):
     "Serves as a base class for other versions"
     ...
 
@@ -209,7 +204,7 @@ class PosPlugin(PluginBase_V22):
     ...
 
 
-class CircularBuffPlugin(Device):
+class CircularBuffPlugin(PluginBase_V22):
     "Serves as a base class for other versions"
     ...
 
@@ -644,11 +639,9 @@ class ProcessPlugin_V34(ProcessPlugin_V33, PluginBase_V34, version=(3, 4), versi
 
 
 class ROIPlugin_V20(ROIPlugin, PluginBase_V20, version=(2, 0), version_of=ROIPlugin):
-    array_size_012 = DDC_EpicsSignalRO(
-        ("array_size0", "ArraySize0_RBV"),
-        ("array_size1", "ArraySize1_RBV"),
-        ("array_size2", "ArraySize2_RBV"),
-    )
+    array_size_0 = Cpt(EpicsSignalRO, 'ArraySize0_RBV')
+    array_size_1 = Cpt(EpicsSignalRO, 'ArraySize1_RBV')
+    array_size_2 = Cpt(EpicsSignalRO, 'ArraySize2_RBV')
 
 
 class ROIPlugin_V22(ROIPlugin_V20, PluginBase_V22, version=(2, 2), version_of=ROIPlugin):
@@ -755,15 +748,6 @@ class StatsPlugin_V22(StatsPlugin_V20, PluginBase_V22, version=(2, 2), version_o
     min = DDC_SignalWithRBV(("min_x", "MinX"), ("min_y", "MinY"), doc="min")
     # reset_TODO = DDC_EpicsSignal(("reset1", "Reset1"), ("reset2", "Reset2"), doc="reset")
     sigma = DDC_SignalWithRBV(("sigma_x", "SigmaX"), ("sigma_y", "SigmaY"), doc="sigma")
-
-    # Changed type to SignalWithRBV in R2-2:
-    centroid = DDC_SignalWithRBV(
-        ('x', 'CentroidX'),
-        ('y', 'CentroidY'),
-        doc='The centroid XY'
-    )
-    color_mode = Cpt(SignalWithRBV, 'ColorMode')
-    data_type = Cpt(SignalWithRBV, 'DataType', string=True)
 
 
 class StatsPlugin_V25(StatsPlugin_V22, version=(2, 5), version_of=StatsPlugin):
@@ -1017,7 +1001,7 @@ class PosPluginPlugin_V34(PosPluginPlugin_V33, PluginBase_V34, version=(3, 4), v
 # --- NDCircularBuff.template ---
 
 
-class CircularBuffPlugin_V22(CircularBuffPlugin, PluginBase_V22, version=(2, 2), version_of=CircularBuffPlugin):
+class CircularBuffPlugin_V22(PluginBase_V22, version=(2, 2), version_of=CircularBuffPlugin):
     actual_trigger_count = Cpt(EpicsSignalRO, "ActualTriggerCount_RBV")
     capture = Cpt(SignalWithRBV, "Capture")
     current_qty = Cpt(EpicsSignalRO, "CurrentQty_RBV")
@@ -1033,12 +1017,6 @@ class CircularBuffPlugin_V22(CircularBuffPlugin, PluginBase_V22, version=(2, 2),
     trigger_b_val = Cpt(EpicsSignal, "TriggerBVal")
     trigger_calc = Cpt(SignalWithRBV, "TriggerCalc")
     trigger_calc_val = Cpt(EpicsSignal, "TriggerCalcVal")
-
-    array_size_xyz = DDC_EpicsSignalRO(
-        ("array_size_x", "ArraySizeX_RBV"),
-        ("array_size_y", "ArraySizeY_RBV"),
-        ("array_size_z", "ArraySizeZ_RBV"),
-    )
 
 
 class CircularBuffPlugin_V26(
@@ -1076,9 +1054,6 @@ class AttributeNPlugin_V22(Device, version=(2, 2), version_of=AttributeNPlugin):
     value_sum = Cpt(EpicsSignalRO, "ValueSum_RBV")
     value = Cpt(EpicsSignalRO, "Value_RBV")
 
-
-class AttributeNPlugin_V26(AttributeNPlugin_V22, version=(2, 6), version_of=AttributeNPlugin):
-    ...
 
 # --- NDAttrPlot.template ---
 
@@ -1189,7 +1164,7 @@ class AttributePlugin_V20(PluginBase_V20, version=(2, 0), version_of=AttributePl
 
 
 
-class AttributePlugin_V22(PluginBase_V22, AttributePlugin_V20, version=(2, 2), version_of=AttributePlugin):
+class AttributePlugin_V22(AttributePlugin_V20, PluginBase_V22, version=(2, 2), version_of=AttributePlugin):
     array_data = None  # REMOVED
     attribute_name = None  # REMOVED
     # hmm: reset = Cpt(EpicsSignal, 'Reset', string=True, doc="0='Done Reset' 1='Reset'")
@@ -1203,160 +1178,21 @@ class AttributePlugin_V22(PluginBase_V22, AttributePlugin_V20, version=(2, 2), v
     update_period = None  # REMOVED
     value_sum = None  # REMOVED
     value = None  # REMOVED
-    array_size_xyz = DDC_EpicsSignalRO(
-        ("array_size_x", "ArraySizeX_RBV"),
-        ("array_size_y", "ArraySizeY_RBV"),
-        ("array_size_z", "ArraySizeZ_RBV"),
-    )
 
 
 
-class AttributePlugin_V26(AttributePlugin, PluginBase_V26, version=(2, 6), version_of=AttributePlugin):
+class AttributePlugin_V26(AttributePlugin_V22, PluginBase_V26, version=(2, 6), version_of=AttributePlugin):
     ...
 
 
-class AttributePlugin_V31(AttributePlugin, PluginBase_V31, version=(3, 1), version_of=AttributePlugin):
-    array_size_all = DDC_SignalWithRBV(
-        ("array_size0", "ArraySize0"),
-        ("array_size1", "ArraySize1"),
-        ("array_size2", "ArraySize2"),
-        ("array_size3", "ArraySize3"),
-        ("array_size4", "ArraySize4"),
-        ("array_size5", "ArraySize5"),
-        ("array_size6", "ArraySize6"),
-        ("array_size7", "ArraySize7"),
-        ("array_size8", "ArraySize8"),
-        ("array_size9", "ArraySize9"),
-        doc="array_size",
-    )
-
-
-class AttributePlugin_V33(AttributePlugin, PluginBase_V33, version=(3, 3), version_of=AttributePlugin):
+class AttributePlugin_V31(AttributePlugin_V26, PluginBase_V31, version=(3, 1), version_of=AttributePlugin):
     ...
 
 
-class AttributePlugin_V34(AttributePlugin, PluginBase_V34, version=(3, 4), version_of=AttributePlugin):
+class AttributePlugin_V33(AttributePlugin_V31, PluginBase_V33, version=(3, 3), version_of=AttributePlugin):
     ...
 
 
-available_versions = [(2, 0), (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6),
-                      (3, 1), (3, 2), (3, 3), (3, 4),
-                      ]
-
-def _select_version(cls, version):
-    all_versions = cls._device_versions_
-    try:
-        matched_version = max(ver for ver in all_versions if ver <= version)
-    except ValueError:
-        print('Failed to find version of', cls.__name__, 'for version', version,
-              'all versions:', all_versions)
-        raise
-
-    return all_versions[matched_version]
-
-
-class CommonOverlayPlugin(Device, version=(0, 0)):
+class AttributePlugin_V34(AttributePlugin_V33, PluginBase_V34, version=(3, 4), version_of=AttributePlugin):
     ...
 
-class CommonAttributePlugin(Device, version=(0, 0)):
-    ...
-
-class CommonROIStatPlugin(Device, version=(0, 0)):
-    ...
-
-class CommonGatherPlugin(Device, version=(0, 0)):
-    ...
-
-def _generate_overlay_plugin(clsname, version):
-    cpt_cls = _select_version(Overlay, version)
-    base_cls = _select_version(OverlayPlugin, version)
-    mixin_cls = _select_version(PluginBase, version)
-
-    class _OverlayPlugin(base_cls, mixin_cls, version=version, version_of=CommonOverlayPlugin):
-        overlay_1 = Cpt(cpt_cls, '1:')
-        overlay_2 = Cpt(cpt_cls, '2:')
-        overlay_3 = Cpt(cpt_cls, '3:')
-        overlay_4 = Cpt(cpt_cls, '4:')
-        overlay_5 = Cpt(cpt_cls, '5:')
-        overlay_6 = Cpt(cpt_cls, '6:')
-        overlay_7 = Cpt(cpt_cls, '7:')
-        overlay_8 = Cpt(cpt_cls, '8:')
-    return _OverlayPlugin
-
-
-def _generate_attribute_plugin(clsname, version):
-    if version < (2, 2):
-        return None
-    cpt_cls = _select_version(AttributeNPlugin, version)
-    base_cls = _select_version(AttributePlugin, version)
-    mixin_cls = _select_version(PluginBase, version)
-
-    class _AttributePlugin(base_cls, mixin_cls, version=version, version_of=CommonAttributePlugin):
-        attr_1 = Cpt(cpt_cls, '1:')
-        attr_2 = Cpt(cpt_cls, '2:')
-        attr_3 = Cpt(cpt_cls, '3:')
-        attr_4 = Cpt(cpt_cls, '4:')
-        attr_5 = Cpt(cpt_cls, '5:')
-        attr_6 = Cpt(cpt_cls, '6:')
-        attr_7 = Cpt(cpt_cls, '7:')
-        attr_8 = Cpt(cpt_cls, '8:')
-
-    return _AttributePlugin
-
-
-def _generate_roistat_plugin(clsname, version):
-    if version < (2, 2):
-        return None
-
-    cpt_cls = _select_version(ROIStatNPlugin, version)
-    base_cls = _select_version(ROIStatPlugin, version)
-    mixin_cls = _select_version(PluginBase, version)
-
-    class _ROIStatPlugin(base_cls, mixin_cls, version=version, version_of=CommonROIStatPlugin):
-        roistat_1 = Cpt(cpt_cls, '1:')
-        roistat_2 = Cpt(cpt_cls, '2:')
-        roistat_3 = Cpt(cpt_cls, '3:')
-        roistat_4 = Cpt(cpt_cls, '4:')
-        roistat_5 = Cpt(cpt_cls, '5:')
-        roistat_6 = Cpt(cpt_cls, '6:')
-        roistat_7 = Cpt(cpt_cls, '7:')
-        roistat_8 = Cpt(cpt_cls, '8:')
-
-    return _ROIStatPlugin
-
-
-def _generate_gather_plugin(clsname, version):
-    if version < (3, 1):
-        return None
-
-    cpt_cls = _select_version(GatherNPlugin, version)
-    base_cls = _select_version(GatherPlugin, version)
-    mixin_cls = _select_version(PluginBase, version)
-
-    class _GatherPlugin(base_cls, mixin_cls, version=version,
-                        version_of=CommonGatherPlugin):
-        gather_1 = Cpt(cpt_cls, '', index=1)
-        gather_2 = Cpt(cpt_cls, '', index=2)
-        gather_3 = Cpt(cpt_cls, '', index=3)
-        gather_4 = Cpt(cpt_cls, '', index=4)
-        gather_5 = Cpt(cpt_cls, '', index=5)
-        gather_6 = Cpt(cpt_cls, '', index=6)
-        gather_7 = Cpt(cpt_cls, '', index=7)
-        gather_8 = Cpt(cpt_cls, '', index=8)
-
-    return _GatherPlugin
-
-
-for version in available_versions:
-    version_str = ''.join(str(v) for v in version)
-    clsname = 'CommonAttributePlugin_V{}'.format(version_str)
-    globals()[clsname] = _generate_attribute_plugin(clsname, version)
-
-    clsname = 'CommonOverlayPlugin_V{}'.format(version_str)
-    globals()[clsname] = _generate_overlay_plugin(clsname, version)
-
-    clsname = 'CommonROIStatPlugin_V{}'.format(version_str)
-    globals()[clsname] = _generate_roistat_plugin(clsname, version)
-
-    clsname = 'CommonGatherPlugin_V{}'.format(version_str)
-    globals()[clsname] = _generate_gather_plugin(clsname, version)
