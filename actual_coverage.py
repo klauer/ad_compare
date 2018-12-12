@@ -29,21 +29,24 @@ for cls, pvfn in [
     pvs += list(walk.item.setpoint_pvname for walk in plugin.walk_signals(include_lazy=True)
                 if hasattr(walk.item, 'setpoint_pvname'))
     pvs = set(pvs)
-    print('total pvs', len(pvs))
-
-
     from_ioc = [pv.strip() for pv in open(f'pvlists/{pvfn}.txt', 'rt').readlines()]
-    print('from ioc', len(from_ioc))
+
+    print(pvfn, 'total pvs in ophyd', len(pvs), 'of', len(from_ioc), 'PVs from IOC',
+          (float(len(pvs)) / len(from_ioc)) * 100.0, '%')
 
     missing = set(from_ioc) - pvs
 
-    print('missing:')
-    for pv in sorted(missing):
-        print('*', 'MISSING', pv, pvfn)
+    if missing:
+        print('missing:')
+        for pv in sorted(missing):
+            print('*', 'MISSING', pv, pvfn)
 
-    print()
-    print()
-    print()
-    print('should not exist:')
-    for pv in sorted(set(pvs) - set(from_ioc)):
-        print('*', 'ERROR', pv, pvfn)
+        print()
+        print()
+        print()
+
+    errors = set(pvs) - set(from_ioc)
+    if errors:
+        print('should not exist:')
+        for pv in sorted(errors):
+            print('*', 'ERROR', pv, pvfn)
