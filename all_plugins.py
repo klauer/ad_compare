@@ -306,69 +306,69 @@ class HDF5Plugin_V25(HDF5Plugin_V22, version=(2, 5), version_of=HDF5Plugin):
         EpicsSignalRO, "SWMRSupported_RBV", string=True, doc="0='Not Supported' 1='Supported'"
     )
     extra_dim_chunk = DDC_SignalWithRBV(
-        ("extra_dim_chunk3", "ExtraDimChunk3"),
-        ("extra_dim_chunk4", "ExtraDimChunk4"),
-        ("extra_dim_chunk5", "ExtraDimChunk5"),
-        ("extra_dim_chunk6", "ExtraDimChunk6"),
-        ("extra_dim_chunk7", "ExtraDimChunk7"),
-        ("extra_dim_chunk8", "ExtraDimChunk8"),
-        ("extra_dim_chunk9", "ExtraDimChunk9"),
-        ("extra_dim_chunk_x", "ExtraDimChunkX"),
-        ("extra_dim_chunk_y", "ExtraDimChunkY"),
+        ("chunk_3", "ExtraDimChunk3"),
+        ("chunk_4", "ExtraDimChunk4"),
+        ("chunk_5", "ExtraDimChunk5"),
+        ("chunk_6", "ExtraDimChunk6"),
+        ("chunk_7", "ExtraDimChunk7"),
+        ("chunk_8", "ExtraDimChunk8"),
+        ("chunk_9", "ExtraDimChunk9"),
+        ("chunk_x", "ExtraDimChunkX"),
+        ("chunk_y", "ExtraDimChunkY"),
         doc="extra_dim_chunk",
     )
     extra_dim_name = DDC_EpicsSignalRO(
-        ("extra_dim_name3", "ExtraDimName3_RBV"),
-        ("extra_dim_name4", "ExtraDimName4_RBV"),
-        ("extra_dim_name5", "ExtraDimName5_RBV"),
-        ("extra_dim_name6", "ExtraDimName6_RBV"),
-        ("extra_dim_name7", "ExtraDimName7_RBV"),
-        ("extra_dim_name8", "ExtraDimName8_RBV"),
-        ("extra_dim_name9", "ExtraDimName9_RBV"),
+        ("name_3", "ExtraDimName3_RBV"),
+        ("name_4", "ExtraDimName4_RBV"),
+        ("name_5", "ExtraDimName5_RBV"),
+        ("name_6", "ExtraDimName6_RBV"),
+        ("name_7", "ExtraDimName7_RBV"),
+        ("name_8", "ExtraDimName8_RBV"),
+        ("name_9", "ExtraDimName9_RBV"),
 
-        ("extra_dim_name_x", "ExtraDimNameX_RBV"),
-        ("extra_dim_name_y", "ExtraDimNameY_RBV"),
-        ("extra_dim_name_n", "ExtraDimNameN_RBV"),
+        ("name_x", "ExtraDimNameX_RBV"),
+        ("name_y", "ExtraDimNameY_RBV"),
+        ("name_n", "ExtraDimNameN_RBV"),
         doc="extra_dim_name",
     )
     extra_dim_size = DDC_SignalWithRBV(
-        ("extra_dim_size3", "ExtraDimSize3"),
-        ("extra_dim_size4", "ExtraDimSize4"),
-        ("extra_dim_size5", "ExtraDimSize5"),
-        ("extra_dim_size6", "ExtraDimSize6"),
-        ("extra_dim_size7", "ExtraDimSize7"),
-        ("extra_dim_size8", "ExtraDimSize8"),
-        ("extra_dim_size9", "ExtraDimSize9"),
+        ("size_3", "ExtraDimSize3"),
+        ("size_4", "ExtraDimSize4"),
+        ("size_5", "ExtraDimSize5"),
+        ("size_6", "ExtraDimSize6"),
+        ("size_7", "ExtraDimSize7"),
+        ("size_8", "ExtraDimSize8"),
+        ("size_9", "ExtraDimSize9"),
 
-        ("extra_dim_size_x", "ExtraDimSizeX"),
-        ("extra_dim_size_y", "ExtraDimSizeY"),
-        ("extra_dim_size_n", "ExtraDimSizeN"),
+        ("size_x", "ExtraDimSizeX"),
+        ("size_y", "ExtraDimSizeY"),
+        ("size_n", "ExtraDimSizeN"),
         doc="extra_dim_size",
     )
     pos_index_dim = DDC_SignalWithRBV(
-        ("pos_index_dim3", "PosIndexDim3"),
-        ("pos_index_dim4", "PosIndexDim4"),
-        ("pos_index_dim5", "PosIndexDim5"),
-        ("pos_index_dim6", "PosIndexDim6"),
-        ("pos_index_dim7", "PosIndexDim7"),
-        ("pos_index_dim8", "PosIndexDim8"),
-        ("pos_index_dim9", "PosIndexDim9"),
-        ("pos_index_dim_x", "PosIndexDimX"),
-        ("pos_index_dim_y", "PosIndexDimY"),
-        ("pos_index_dim_n", "PosIndexDimN"),
+        ("dim_3", "PosIndexDim3"),
+        ("dim_4", "PosIndexDim4"),
+        ("dim_5", "PosIndexDim5"),
+        ("dim_6", "PosIndexDim6"),
+        ("dim_7", "PosIndexDim7"),
+        ("dim_8", "PosIndexDim8"),
+        ("dim_9", "PosIndexDim9"),
+        ("dim_x", "PosIndexDimX"),
+        ("dim_y", "PosIndexDimY"),
+        ("dim_n", "PosIndexDimN"),
         doc="pos_index_dim",
     )
     pos_name_dim = DDC_SignalWithRBV(
-        ("pos_name_dim3", "PosNameDim3"),
-        ("pos_name_dim4", "PosNameDim4"),
-        ("pos_name_dim5", "PosNameDim5"),
-        ("pos_name_dim6", "PosNameDim6"),
-        ("pos_name_dim7", "PosNameDim7"),
-        ("pos_name_dim8", "PosNameDim8"),
-        ("pos_name_dim9", "PosNameDim9"),
-        ("pos_name_dim_x", "PosNameDimX"),
-        ("pos_name_dim_y", "PosNameDimY"),
-        ("pos_name_dim_n", "PosNameDimN"),
+        ("dim_3", "PosNameDim3"),
+        ("dim_4", "PosNameDim4"),
+        ("dim_5", "PosNameDim5"),
+        ("dim_6", "PosNameDim6"),
+        ("dim_7", "PosNameDim7"),
+        ("dim_8", "PosNameDim8"),
+        ("dim_9", "PosNameDim9"),
+        ("dim_x", "PosNameDimX"),
+        ("dim_y", "PosNameDimY"),
+        ("dim_n", "PosNameDimN"),
         doc="pos_name_dim",
     )
 
@@ -387,25 +387,7 @@ class HDF5Plugin_V32(HDF5Plugin_V31, version=(3, 2), version_of=HDF5Plugin):
     )
     blosc_level = Cpt(SignalWithRBV, "BloscLevel")
     blosc_shuffle = Cpt(SignalWithRBV, "BloscShuffle", string=True, doc="0=None 1=ByteShuffle 2=BitShuffle")
-    # hmm: compression = Cpt(SignalWithRBV, 'Compression', string=True, doc="0=None 1=N-bit 2=szip 3=zlib 4=blosc")
-    # hmm: io_speed = Cpt(EpicsSignal, 'IOSpeed')
-    # hmm: run_time = Cpt(EpicsSignal, 'RunTime')
-    # hmm: swmr_active = Cpt(EpicsSignalRO, 'SWMRActive_RBV', string=True, doc="0='Off' 1='Active'")
-    # hmm: swmr_cb_counter = Cpt(EpicsSignalRO, 'SWMRCbCounter_RBV')
-    # hmm: swmr_supported = Cpt(EpicsSignalRO, 'SWMRSupported_RBV', string=True, doc="0='Not Supported' 1='Supported'")
-    extra_dim_name = DDC_EpicsSignalRO(
-        ("extra_dim_name3", "ExtraDimName3_RBV"),
-        ("extra_dim_name4", "ExtraDimName4_RBV"),
-        ("extra_dim_name5", "ExtraDimName5_RBV"),
-        ("extra_dim_name6", "ExtraDimName6_RBV"),
-        ("extra_dim_name7", "ExtraDimName7_RBV"),
-        ("extra_dim_name8", "ExtraDimName8_RBV"),
-        ("extra_dim_name9", "ExtraDimName9_RBV"),
-        ("extra_dim_name_x", "ExtraDimNameX_RBV"),
-        ("extra_dim_name_y", "ExtraDimNameY_RBV"),
-        ("extra_dim_name_n", "ExtraDimNameN_RBV"),
-        doc="extra_dim_name",
-    )
+    compression = Cpt(SignalWithRBV, 'Compression', string=True, doc="0=None 1=N-bit 2=szip 3=zlib 4=blosc")
 
 
 class HDF5Plugin_V33(FilePlugin_V33, HDF5Plugin_V32, version=(3, 3), version_of=HDF5Plugin):
@@ -494,8 +476,7 @@ class MagickPlugin_V26(FilePlugin_V26, MagickPlugin_V22, version=(2, 6), version
 
 
 class MagickPlugin_V31(FilePlugin_V31, MagickPlugin_V26, version=(3, 1), version_of=MagickPlugin):
-    # hmm: bit_depth = Cpt(SignalWithRBV, 'BitDepth', string=True, doc="1=1 8=8 16=16 32=32")
-    ...
+    bit_depth = Cpt(SignalWithRBV, 'BitDepth', string=True, doc="1=1 8=8 16=16 32=32")
 
 
 class MagickPlugin_V33(FilePlugin_V33, MagickPlugin_V31, version=(3, 3), version_of=MagickPlugin):
@@ -574,7 +555,7 @@ class NexusPlugin_V34(FilePlugin_V34, NexusPlugin_V33, version=(3, 4), version_o
 class Overlay_V21(Overlay, version=(2, 1), version_of=Overlay):
     display_text = Cpt(SignalWithRBV, "DisplayText")
     font = Cpt(SignalWithRBV, "Font", string=True, doc="0=6x13 1='6x13 Bold' 2=9x15 3='9x15 Bold'")
-    # hmm: shape = Cpt(SignalWithRBV, 'Shape', string=True, doc="0=Cross 1=Rectangle 2=Text")
+    shape = Cpt(SignalWithRBV, 'Shape', string=True, doc="0=Cross 1=Rectangle 2=Text")
     time_stamp_format = Cpt(SignalWithRBV, "TimeStampFormat", string=True)
     width = DDC_SignalWithRBV(("width_x", "WidthX"), ("width_y", "WidthY"), doc="width")
     width_link = DDC_EpicsSignal(
@@ -583,7 +564,7 @@ class Overlay_V21(Overlay, version=(2, 1), version_of=Overlay):
 
 
 class Overlay_V26(Overlay_V21, version=(2, 6), version_of=Overlay):
-    # hmm: shape = Cpt(SignalWithRBV, 'Shape', string=True, doc="0=Cross 1=Rectangle 3=Ellipse 2=Text")
+    shape = Cpt(SignalWithRBV, 'Shape', string=True, doc="0=Cross 1=Rectangle 2=Text 3=Ellipse ")
     center = DDC_SignalWithRBV(("center_x", "CenterX"), ("center_y", "CenterY"), doc="center")
     center_link = DDC_EpicsSignal(
         ("center_xlink", "CenterXLink"), ("center_ylink", "CenterYLink"), doc="center_link"
@@ -796,7 +777,6 @@ class StatsPlugin_V26(PluginBase_V26, StatsPlugin_V25, version=(2, 6), version_o
     hist_above = Cpt(SignalWithRBV, "HistAbove")
     hist_below = Cpt(SignalWithRBV, "HistBelow")
     orientation = Cpt(SignalWithRBV, "Orientation")
-    # hmm: reset = Cpt(EpicsSignal, 'Reset')
     resets = DDC_EpicsSignal(("reset1", "Reset1"), ("reset2", "Reset2"), doc="reset")
     ts_centroid_total = Cpt(EpicsSignal, "TSCentroidTotal")
     ts_eccentricity = Cpt(EpicsSignal, "TSEccentricity")
@@ -818,24 +798,15 @@ class StatsPlugin_V32(StatsPlugin_V31, version=(3, 2), version_of=StatsPlugin):
 
 
 class StatsPlugin_V33(PluginBase_V33, StatsPlugin_V32, version=(3, 3), version_of=StatsPlugin):
-    # hmm: ts_centroid_total = Cpt(EpicsSignal, 'TSCentroidTotal')
-    # hmm: ts_eccentricity = Cpt(EpicsSignal, 'TSEccentricity')
-    # hmm: ts_max_value = Cpt(EpicsSignal, 'TSMaxValue')
-    # hmm: ts_mean_value = Cpt(EpicsSignal, 'TSMeanValue')
-    # hmm: ts_min_value = Cpt(EpicsSignal, 'TSMinValue')
-    # hmm: ts_net = Cpt(EpicsSignal, 'TSNet')
-    # hmm: ts_orientation = Cpt(EpicsSignal, 'TSOrientation')
-    # hmm: ts_sigma = Cpt(EpicsSignal, 'TSSigma')
-    # hmm: ts_sigma_xy = Cpt(EpicsSignal, 'TSSigmaXY')
-    # hmm: ts_timestamp = Cpt(EpicsSignal, 'TSTimestamp')
-    # hmm: ts_total = Cpt(EpicsSignal, 'TSTotal')
     ts_acquiring = None  # REMOVED
     ts_control = None  # REMOVED
     ts_current_point = None  # REMOVED
     ts_num_points = None  # REMOVED
     ts_read = None  # REMOVED
-    # Overriding ts_sigma_x=None
-    ts_sigma_x = DDC_EpicsSignal(("ts_sigma_x", "TSSigmaX"), ("ts_sigma_y", "TSSigmaY"), doc="ts_sigma")
+    ts_sigma_x = DDC_EpicsSignal(
+        ("ts_sigma_x", "TSSigmaX"),
+        ("ts_sigma_y", "TSSigmaY"),
+        doc="ts_sigma")
 
 
 class StatsPlugin_V34(PluginBase_V34, StatsPlugin_V33, version=(3, 4), version_of=StatsPlugin):
@@ -993,7 +964,6 @@ class ScatterPlugin_V31(PluginBase_V31, version=(3, 1), version_of=ScatterPlugin
 
 
 class ScatterPlugin_V32(ScatterPlugin_V31, version=(3, 2), version_of=ScatterPlugin):
-    # hmm: scatter_method = Cpt(SignalWithRBV, 'ScatterMethod', string=True, doc="0='Round robin'")
     ...
 
 
@@ -1027,11 +997,6 @@ class PosPluginPlugin_V25(PluginBase, version=(2, 5), version_of=PosPlugin):
 
 
 class PosPluginPlugin_V26(PluginBase_V26, PosPluginPlugin_V25, version=(2, 6), version_of=PosPlugin):
-    # hmm: duplicate = Cpt(SignalWithRBV, 'Duplicate')
-    # hmm: id_difference = Cpt(SignalWithRBV, 'IDDifference')
-    # hmm: id_name = Cpt(SignalWithRBV, 'IDName', string=True)
-    # hmm: id_start = Cpt(SignalWithRBV, 'IDStart')
-    # hmm: missing = Cpt(SignalWithRBV, 'Missing')
     ...
 
 
@@ -1225,7 +1190,6 @@ class AttributePlugin_V20(PluginBase_V20, version=(2, 0), version_of=AttributePl
 class AttributePlugin_V22(PluginBase_V22, AttributePlugin_V20, version=(2, 2), version_of=AttributePlugin):
     array_data = None  # REMOVED
     attribute_name = None  # REMOVED
-    # hmm: reset = Cpt(EpicsSignal, 'Reset', string=True, doc="0='Done Reset' 1='Reset'")
     reset_array_counter = None  # REMOVED
     ts_acquiring = Cpt(EpicsSignal, 'TSAcquiring', string=True, doc="0='Done' 1='Acquiring'")
     ts_control = Cpt(EpicsSignal, 'TSControl', string=True, doc="0=Erase/Start 1=Start 2=Stop 3=Read")
