@@ -25,22 +25,9 @@ from ophyd.areadetector.plugins import (
     TIFFPlugin,
     TransformPlugin,
 )
+from ophyd.areadetector.base import (DDC_EpicsSignal, DDC_EpicsSignalRO,
+                                     DDC_SignalWithRBV)
 from ophyd.areadetector import EpicsSignalWithRBV as SignalWithRBV, ad_group
-
-
-def DDC_EpicsSignal(*items, **kw):
-    default_read_attrs = kw.pop("default_read_attrs", [attr for attr, prefix in items])
-    return DDC(ad_group(EpicsSignal, items), default_read_attrs=default_read_attrs, **kw)
-
-
-def DDC_EpicsSignalRO(*items, **kw):
-    default_read_attrs = kw.pop("default_read_attrs", [attr for attr, prefix in items])
-    return DDC(ad_group(EpicsSignalRO, items), default_read_attrs=default_read_attrs, **kw)
-
-
-def DDC_SignalWithRBV(*items, **kw):
-    default_read_attrs = kw.pop("default_read_attrs", [attr for attr, prefix in items])
-    return DDC(ad_group(SignalWithRBV, items), default_read_attrs=default_read_attrs, **kw)
 
 
 class PluginBase_V20(PluginBase, version=(2, 0), version_of=PluginBase):
@@ -170,80 +157,7 @@ class FilePlugin_V34(PluginBase_V34, FilePlugin_V33, version=(3, 4), version_of=
     ...
 
 
-class PvaPlugin(PluginBase_V22):
-    "Serves as a base class for other versions"
-    ...
-
-
-class ROIStatPlugin(PluginBase_V22):
-    "Serves as a base class for other versions"
-    ...
-
-
-class ROIStatNPlugin(Device):
-    "Serves as a base class for other versions"
-    ...
-
-
-class AttributePlugin(Device):
-    "Serves as a base class for other versions"
-    ...
-
-
-class AttributeNPlugin(Device):
-    "Serves as a base class for other versions"
-    ...
-
-
-class FFTPlugin(PluginBase_V22):
-    "Serves as a base class for other versions"
-    ...
-
-
-class ScatterPlugin(PluginBase_V22):
-    "Serves as a base class for other versions"
-    ...
-
-
-class PosPlugin(PluginBase_V22):
-    "Serves as a base class for other versions"
-    ...
-
-
-class CircularBuffPlugin(Device):
-    "Serves as a base class for other versions"
-    ...
-
-
-class AttrPlotPlugin(PluginBase_V22):
-    "Serves as a base class for other versions"
-    ...
-
-
-class TimeSeriesNPlugin(Device):
-    "Serves as a base class for other versions"
-    ...
-
-
-class TimeSeriesPlugin(PluginBase_V22):
-    "Serves as a base class for other versions"
-    ...
-
-
-class CodecPlugin(PluginBase_V22):
-    "Serves as a base class for other versions"
-    ...
-
-
-class GatherPlugin(PluginBase, version=(3, 1)):
-    "Serves as a base class for other versions"
-    ...
-
-
-class GatherNPlugin(Device):
-    "Serves as a base class for other versions"
-    ...
-
+# ColorConvPlugin
 
 class ColorConvPlugin_V20(PluginBase_V20, ColorConvPlugin, version=(2, 0), version_of=ColorConvPlugin):
     ...
@@ -569,10 +483,8 @@ class Overlay_V26(Overlay_V21, version=(2, 6), version_of=Overlay):
     center_link = DDC_EpicsSignal(
         ("center_xlink", "CenterXLink"), ("center_ylink", "CenterYLink"), doc="center_link"
     )
-    # Overriding position_x=None
-    position_x = DDC_SignalWithRBV(("position_x", "PositionX"), ("position_y", "PositionY"), doc="position")
-    # Overriding set_xhopr=None
-    set_xhopr = DDC_EpicsSignal(("set_xhopr", "SetXHOPR"), ("set_yhopr", "SetYHOPR"), doc="set_hopr")
+    position_ = DDC_SignalWithRBV(("position_x", "PositionX"), ("position_y", "PositionY"), doc="position")
+    set_hopr = DDC_EpicsSignal(("set_xhopr", "SetXHOPR"), ("set_yhopr", "SetYHOPR"), doc="set_hopr")
 
 
 class Overlay_V31(Overlay_V26, version=(3, 1), version_of=Overlay):
@@ -674,7 +586,12 @@ class ROIPlugin_V34(PluginBase_V34, ROIPlugin_V33, version=(3, 4), version_of=RO
 # --- NDROIStat.template ---
 
 
-class ROIStatPlugin_V22(PluginBase_V22, version=(2, 2), version_of=ROIStatPlugin):
+class ROIStatPlugin(Device):
+    "Serves as a base class for other versions"
+    ...
+
+
+class ROIStatPlugin_V22(PluginBase_V22, ROIStatPlugin, version=(2, 2), version_of=ROIStatPlugin):
     reset_all = Cpt(EpicsSignal, "ResetAll", string=True, doc="")
 
 
@@ -705,7 +622,12 @@ class ROIStatPlugin_V34(PluginBase_V34, ROIStatPlugin_V33, version=(3, 4), versi
 # --- NDROIStatN.template ---
 
 
-class ROIStatNPlugin_V22(Device, version=(2, 2), version_of=ROIStatNPlugin):
+class ROIStatNPlugin(Device):
+    "Serves as a base class for other versions"
+    ...
+
+
+class ROIStatNPlugin_V22(ROIStatNPlugin, version=(2, 2), version_of=ROIStatNPlugin):
     bgd_width = Cpt(SignalWithRBV, "BgdWidth")
     max_value = Cpt(EpicsSignalRO, "MaxValue_RBV")
     mean_value = Cpt(EpicsSignalRO, "MeanValue_RBV")
@@ -900,7 +822,12 @@ class TransformPlugin_V34(PluginBase_V34, TransformPlugin_V33, version=(3, 4), v
 # --- NDPva.template ---
 
 
-class PvaPlugin_V25(PluginBase, version=(2, 5), version_of=PvaPlugin):
+class PvaPlugin(Device):
+    "Serves as a base class for other versions"
+    ...
+
+
+class PvaPlugin_V25(PluginBase_V22, PvaPlugin, version=(2, 5), version_of=PvaPlugin):
     pv_name = Cpt(EpicsSignalRO, "PvName_RBV")
 
 
@@ -923,7 +850,12 @@ class PvaPlugin_V34(PluginBase_V34, PvaPlugin_V33, version=(3, 4), version_of=Pv
 # --- NDFFT.template ---
 
 
-class FFTPlugin_V25(PluginBase, version=(2, 5), version_of=FFTPlugin):
+class FFTPlugin(Device):
+    "Serves as a base class for other versions"
+    ...
+
+
+class FFTPlugin_V25(PluginBase_V22, FFTPlugin, version=(2, 5), version_of=FFTPlugin):
     fft_abs_value = Cpt(EpicsSignal, "FFTAbsValue")
     fft_direction = Cpt(SignalWithRBV, "FFTDirection", string=True, doc="0='Time to freq.' 1='Freq. to time'")
     fft_freq_axis = Cpt(EpicsSignal, "FFTFreqAxis")
@@ -959,7 +891,12 @@ class FFTPlugin_V34(PluginBase_V34, FFTPlugin_V33, version=(3, 4), version_of=FF
 # --- NDScatter.template ---
 
 
-class ScatterPlugin_V31(PluginBase_V31, version=(3, 1), version_of=ScatterPlugin):
+class ScatterPlugin(Device):
+    "Serves as a base class for other versions"
+    ...
+
+
+class ScatterPlugin_V31(PluginBase_V31, ScatterPlugin, version=(3, 1), version_of=ScatterPlugin):
     scatter_method = Cpt(SignalWithRBV, "ScatterMethod", string=True, doc="0='Round robin'")
 
 
@@ -978,7 +915,12 @@ class ScatterPlugin_V34(PluginBase_V34, ScatterPlugin_V33, version=(3, 4), versi
 # --- NDPosPlugin.template ---
 
 
-class PosPluginPlugin_V25(PluginBase, version=(2, 5), version_of=PosPlugin):
+class PosPlugin(Device):
+    "Serves as a base class for other versions"
+    ...
+
+
+class PosPluginPlugin_V25(PluginBase_V22, PosPlugin, version=(2, 5), version_of=PosPlugin):
     delete = Cpt(EpicsSignal, "Delete", string=True, doc="")
     duplicate = Cpt(SignalWithRBV, "Duplicate")
     expected_id = Cpt(EpicsSignalRO, "ExpectedID_RBV")
@@ -1013,6 +955,11 @@ class PosPluginPlugin_V34(PluginBase_V34, PosPluginPlugin_V33, version=(3, 4), v
 
 
 # --- NDCircularBuff.template ---
+
+
+class CircularBuffPlugin(Device):
+    "Serves as a base class for other versions"
+    ...
 
 
 class CircularBuffPlugin_V22(PluginBase_V22, CircularBuffPlugin, version=(2, 2), version_of=CircularBuffPlugin):
@@ -1068,7 +1015,12 @@ class CircularBuffPlugin_V34(
 # --- NDAttributeN.template ---
 
 
-class AttributeNPlugin_V22(Device, version=(2, 2), version_of=AttributeNPlugin):
+class AttributeNPlugin(Device):
+    "Serves as a base class for other versions"
+    ...
+
+
+class AttributeNPlugin_V22(AttributeNPlugin, version=(2, 2), version_of=AttributeNPlugin):
     attribute_name = Cpt(SignalWithRBV, "AttrName")
     ts_array_value = Cpt(EpicsSignal, "TSArrayValue")
     value_sum = Cpt(EpicsSignalRO, "ValueSum_RBV")
@@ -1081,7 +1033,12 @@ class AttributeNPlugin_V26(AttributeNPlugin_V22, version=(2, 6), version_of=Attr
 # --- NDAttrPlot.template ---
 
 
-class AttrPlotPlugin_V31(PluginBase_V31, version=(3, 1), version_of=AttrPlotPlugin):
+class AttrPlotPlugin(Device):
+    "Serves as a base class for other versions"
+    ...
+
+
+class AttrPlotPlugin_V31(PluginBase_V31, AttrPlotPlugin, version=(3, 1), version_of=AttrPlotPlugin):
     npts = Cpt(EpicsSignal, "NPts")
     reset = Cpt(EpicsSignal, "Reset")
 
@@ -1097,7 +1054,12 @@ class AttrPlotPlugin_V34(PluginBase_V34, AttrPlotPlugin_V33, version=(3, 4), ver
 # --- NDTimeSeriesN.template ---
 
 
-class TimeSeriesNPlugin_V25(Device, version=(2, 5), version_of=TimeSeriesNPlugin):
+class TimeSeriesNPlugin(Device):
+    "Serves as a base class for other versions"
+    ...
+
+
+class TimeSeriesNPlugin_V25(TimeSeriesNPlugin, version=(2, 5), version_of=TimeSeriesNPlugin):
     name_ = Cpt(EpicsSignal, "Name", string=True)
     time_series = Cpt(EpicsSignal, "TimeSeries")
 
@@ -1105,7 +1067,12 @@ class TimeSeriesNPlugin_V25(Device, version=(2, 5), version_of=TimeSeriesNPlugin
 # --- NDTimeSeries.template ---
 
 
-class TimeSeriesPlugin_V25(PluginBase, version=(2, 5), version_of=TimeSeriesPlugin):
+class TimeSeriesPlugin(Device):
+    "Serves as a base class for other versions"
+    ...
+
+
+class TimeSeriesPlugin_V25(PluginBase_V22, TimeSeriesPlugin, version=(2, 5), version_of=TimeSeriesPlugin):
     ts_acquire = Cpt(EpicsSignal, "TSAcquire")
     ts_acquire_mode = Cpt(
         SignalWithRBV, "TSAcquireMode", string=True, doc="0='Fixed length' 1='Circ. buffer'"
@@ -1142,7 +1109,12 @@ class TimeSeriesPlugin_V34(PluginBase_V34, TimeSeriesPlugin_V33, version=(3, 4),
 # --- NDCodec.template ---
 
 
-class CodecPlugin_V34(PluginBase_V34, version=(3, 4), version_of=CodecPlugin):
+class CodecPlugin(Device):
+    "Serves as a base class for other versions"
+    ...
+
+
+class CodecPlugin_V34(PluginBase_V34, CodecPlugin, version=(3, 4), version_of=CodecPlugin):
     blosc_cl_evel = Cpt(SignalWithRBV, "BloscCLevel")
     blosc_compressor = Cpt(
         SignalWithRBV, "BloscCompressor", string=True, doc="0=BloscLZ 1=LZ4 2=LZ4HC 3=SNAPPY 4=ZLIB 5=ZSTD"
@@ -1163,18 +1135,24 @@ class CodecPlugin_V34(PluginBase_V34, version=(3, 4), version_of=CodecPlugin):
 # --- NDGatherN.template ---
 
 
-class GatherNPlugin_V31(Device, version=(3, 1), version_of=GatherNPlugin):
-    gather_array_address = FCpt(SignalWithRBV, "{self.prefix}NDArrayAddress_{self.index}")
-    gather_array_port = FCpt(SignalWithRBV, "{self.prefix}NDArrayPort_{self.index}", string=True)
-
+class GatherNPlugin(Device):
+    "Serves as a base class for other versions"
     def __init__(self, *args, index, **kwargs):
         self.index = index
         super().__init__(*args, **kwargs)
 
 
+class GatherNPlugin_V31(GatherNPlugin, version=(3, 1), version_of=GatherNPlugin):
+    gather_array_address = FCpt(SignalWithRBV, "{self.prefix}NDArrayAddress_{self.index}")
+    gather_array_port = FCpt(SignalWithRBV, "{self.prefix}NDArrayPort_{self.index}", string=True)
 
 
-class AttributePlugin_V20(PluginBase_V20, version=(2, 0), version_of=AttributePlugin):
+class AttributePlugin(Device):
+    "Serves as a base class for other versions"
+    ...
+
+
+class AttributePlugin_V20(PluginBase_V20, AttributePlugin, version=(2, 0), version_of=AttributePlugin):
     array_data = Cpt(EpicsSignalRO, 'ArrayData_RBV')
     attribute_name = Cpt(SignalWithRBV, 'AttrName')
     reset = Cpt(EpicsSignal, 'Reset', string=True, doc="0='Done Reset' 1='Reset'")
@@ -1183,8 +1161,6 @@ class AttributePlugin_V20(PluginBase_V20, version=(2, 0), version_of=AttributePl
     update_period = Cpt(SignalWithRBV, 'UpdatePeriod')
     value_sum = Cpt(EpicsSignalRO, 'ValueSum_RBV')
     value = Cpt(EpicsSignalRO, 'Value_RBV')
-
-
 
 
 class AttributePlugin_V22(PluginBase_V22, AttributePlugin_V20, version=(2, 2), version_of=AttributePlugin):
@@ -1205,7 +1181,6 @@ class AttributePlugin_V22(PluginBase_V22, AttributePlugin_V20, version=(2, 2), v
         ("array_size_y", "ArraySizeY_RBV"),
         ("array_size_z", "ArraySizeZ_RBV"),
     )
-
 
 
 class AttributePlugin_V26(PluginBase_V26, AttributePlugin_V22, version=(2, 6), version_of=AttributePlugin):
@@ -1240,125 +1215,6 @@ class AttributePlugin_V34(PluginBase_V34, AttributePlugin_V33, version=(3, 4), v
     ...
 
 
-available_versions = [(2, 0), (2, 1), (2, 2), (2, 3), (2, 4), (2, 5), (2, 6),
-                      (3, 1), (3, 2), (3, 3), (3, 4),
-                      ]
-
-
-class CommonOverlayPlugin(Device, version=(0, 0)):
+class GatherPlugin(PluginBase_V31, version=(3, 1)):
+    "Serves as a base class for other versions"
     ...
-
-class CommonAttributePlugin(Device, version=(0, 0)):
-    ...
-
-class CommonROIStatPlugin(Device, version=(0, 0)):
-    ...
-
-class CommonGatherPlugin(Device, version=(0, 0)):
-    ...
-
-
-def _select_version(cls, version):
-    all_versions = cls._device_versions_
-    matched_version = max(ver for ver in all_versions if ver <= version)
-    return all_versions[matched_version]
-
-
-def _get_bases(cls, version):
-    mixin_cls = _select_version(cls, version)
-    base_cls = _select_version(PluginBase, version)
-    if issubclass(mixin_cls, base_cls):
-        return [mixin_cls]
-
-    return [mixin_cls, base_cls]
-
-
-def _generate_overlay_plugin(clsname, version):
-    cpt_cls = _select_version(Overlay, version)
-    bases = _get_bases(OverlayPlugin, version)
-
-    class _OverlayPlugin(*bases, version=version, version_of=CommonOverlayPlugin):
-        overlay_1 = Cpt(cpt_cls, '1:')
-        overlay_2 = Cpt(cpt_cls, '2:')
-        overlay_3 = Cpt(cpt_cls, '3:')
-        overlay_4 = Cpt(cpt_cls, '4:')
-        overlay_5 = Cpt(cpt_cls, '5:')
-        overlay_6 = Cpt(cpt_cls, '6:')
-        overlay_7 = Cpt(cpt_cls, '7:')
-        overlay_8 = Cpt(cpt_cls, '8:')
-    return _OverlayPlugin
-
-
-def _generate_attribute_plugin(clsname, version):
-    if version < (2, 2):
-        return None
-    cpt_cls = _select_version(AttributeNPlugin, version)
-    bases = _get_bases(AttributePlugin, version)
-
-    class _AttributePlugin(*bases, version=version, version_of=CommonAttributePlugin):
-        attr_1 = Cpt(cpt_cls, '1:')
-        attr_2 = Cpt(cpt_cls, '2:')
-        attr_3 = Cpt(cpt_cls, '3:')
-        attr_4 = Cpt(cpt_cls, '4:')
-        attr_5 = Cpt(cpt_cls, '5:')
-        attr_6 = Cpt(cpt_cls, '6:')
-        attr_7 = Cpt(cpt_cls, '7:')
-        attr_8 = Cpt(cpt_cls, '8:')
-
-    return _AttributePlugin
-
-
-def _generate_roistat_plugin(clsname, version):
-    if version < (2, 2):
-        return None
-
-    cpt_cls = _select_version(ROIStatNPlugin, version)
-    bases = _get_bases(ROIStatPlugin, version)
-
-    class _ROIStatPlugin(*bases, version=version, version_of=CommonROIStatPlugin):
-        roistat_1 = Cpt(cpt_cls, '1:')
-        roistat_2 = Cpt(cpt_cls, '2:')
-        roistat_3 = Cpt(cpt_cls, '3:')
-        roistat_4 = Cpt(cpt_cls, '4:')
-        roistat_5 = Cpt(cpt_cls, '5:')
-        roistat_6 = Cpt(cpt_cls, '6:')
-        roistat_7 = Cpt(cpt_cls, '7:')
-        roistat_8 = Cpt(cpt_cls, '8:')
-
-    return _ROIStatPlugin
-
-
-def _generate_gather_plugin(clsname, version):
-    if version < (3, 1):
-        return None
-
-    cpt_cls = _select_version(GatherNPlugin, version)
-    bases = _get_bases(CommonGatherPlugin, version)
-
-    class _GatherPlugin(*bases, version=version,
-                        version_of=CommonGatherPlugin):
-        gather_1 = Cpt(cpt_cls, '', index=1)
-        gather_2 = Cpt(cpt_cls, '', index=2)
-        gather_3 = Cpt(cpt_cls, '', index=3)
-        gather_4 = Cpt(cpt_cls, '', index=4)
-        gather_5 = Cpt(cpt_cls, '', index=5)
-        gather_6 = Cpt(cpt_cls, '', index=6)
-        gather_7 = Cpt(cpt_cls, '', index=7)
-        gather_8 = Cpt(cpt_cls, '', index=8)
-
-    return _GatherPlugin
-
-
-for version in available_versions:
-    version_str = ''.join(str(v) for v in version)
-    clsname = 'CommonAttributePlugin_V{}'.format(version_str)
-    globals()[clsname] = _generate_attribute_plugin(clsname, version)
-
-    clsname = 'CommonOverlayPlugin_V{}'.format(version_str)
-    globals()[clsname] = _generate_overlay_plugin(clsname, version)
-
-    clsname = 'CommonROIStatPlugin_V{}'.format(version_str)
-    globals()[clsname] = _generate_roistat_plugin(clsname, version)
-
-    clsname = 'CommonGatherPlugin_V{}'.format(version_str)
-    globals()[clsname] = _generate_gather_plugin(clsname, version)
