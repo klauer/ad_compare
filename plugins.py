@@ -43,8 +43,6 @@ def _generate_overlay_plugin(clsname, version):
 
 
 def _generate_attribute_plugin(clsname, version):
-    if version < (2, 2):
-        return None
     cpt_cls = _select_version(all_plugins.AttributeNPlugin, version)
     bases = _get_bases(all_plugins.AttributePlugin, version)
 
@@ -63,9 +61,6 @@ def _generate_attribute_plugin(clsname, version):
 
 
 def _generate_roistat_plugin(clsname, version):
-    if version < (2, 2):
-        return None
-
     cpt_cls = _select_version(all_plugins.ROIStatNPlugin, version)
     bases = _get_bases(all_plugins.ROIStatPlugin, version)
 
@@ -84,9 +79,6 @@ def _generate_roistat_plugin(clsname, version):
 
 
 def _generate_gather_plugin(clsname, version):
-    if version < (3, 1):
-        return None
-
     cpt_cls = _select_version(all_plugins.GatherNPlugin, version)
     bases = _get_bases(all_plugins.GatherPlugin, version)
 
