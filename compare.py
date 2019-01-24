@@ -1,6 +1,11 @@
 import os
+import io
+
+import git
+
 import pathlib
 import pandas as pd
+
 from recordwhat.parsers.db_parsimonious import dbWalker, db_grammar
 
 
@@ -75,7 +80,12 @@ NO - PV does not exist in the specific version<br/>
 
 
 def summarize_record_info(db_text):
-    parsed = db_grammar.parse(db_text)
+    try:
+        parsed = db_grammar.parse(db_text)
+    except Exception as ex:
+        print(db_text)
+        raise
+
     walker = dbWalker()
     record_info = {}
 
@@ -107,15 +117,34 @@ def undo_changes(value, change_list):
 def preprocess(db_text, path):
     'Pre-process the DB text due to some failures in the grammar of recordwhat'
     lines = []
-    for line in db_text.split('\n'):
-        line = line.strip()
+    stack = list(db_text.split('\n'))
+    while stack:
+        line = stack.pop(0).strip()
         # if line.startswith('include '):
         #     included_fn = line.split(' ', 1)[1].strip('"\'')
         #     with open(path / included_fn, 'rt') as f:
         #         lines.extend(preprocess(f.read(), path=path).split('\n'))
         #     print(' ->', included_fn)
         #     continue
-        if line.startswith('field(') or line.startswith('info('):
+
+        if line.startswith('include'):
+            continue
+        elif line.startswith('field(') or line.startswith('info(') or line.startswith('record('):
+            append = ''
+            if line.startswith('record('):
+                if '{' in line:
+                    print('line', line)
+                    line, next_line = line.split('{', 1)
+                    stack.insert(0, next_line)
+                    append = ' {'
+                    line = line.strip()
+                    if line.endswith('}'):
+                        stack.insert(1, '}')
+                        line = line.strip(' }')
+            elif line.endswith('}'):
+                stack.insert(0, '}')
+                line = line.strip(' }')
+
             # orig_line = line
             field, value = line.split(',', 1)
             start, field = field.split('(', 1)
@@ -125,7 +154,7 @@ def preprocess(db_text, path):
             value = value.strip(' ').strip('"')
             # TODO default string values
             value = value.replace('=""', '')
-            line = f'{start}({field}, "{value}")'
+            line = f'{start}({field}, "{value}"){append}'
             # if orig_line != line:
             #     print('fixed', orig_line, '->', line)
         lines.append(line)
@@ -171,6 +200,45 @@ def compare(fns, *, ignore_simple_changes=True, ad_root=None,
 
     available_versions = [version for version in versions
                           if version in df]
+    for pvname in df.index:
+        initial_value = df.at[pvname, available_versions[0]]
+        for version in available_versions[1:]:
+            value = df.at[pvname, version]
+
+            if ignore_simple_changes:
+                value = undo_changes(value, simple_changes)
+
+            if value == initial_value:
+                if initial_value == missing:
+                    df.at[pvname, version] = missing
+                else:
+                    df.at[pvname, version] = '-'
+            elif value.startswith(initial_value):
+                df.at[pvname, version] = (
+                    'added:\n' + value[len(initial_value):].strip('\n ')
+                )
+                initial_value = value
+            else:
+                initial_value = value
+
+    return df
+
+
+def compare_dbtext(version_to_dbtext, *, ignore_simple_changes=True, template_path=None):
+    version_info = {}
+
+    for tag, db_text in version_to_dbtext.items():
+        if not db_text:
+            continue
+
+        db_text = preprocess(db_text, path=None)
+        version_info[tag] = summarize_record_info(db_text)
+
+    df = pd.DataFrame.from_dict(version_info)
+    missing = 'NO'
+    df = df.fillna(missing)
+
+    available_versions = list(version_to_dbtext)
     for pvname in df.index:
         initial_value = df.at[pvname, available_versions[0]]
         for version in available_versions[1:]:

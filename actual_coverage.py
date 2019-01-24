@@ -1,6 +1,6 @@
-import plugins
 import ophyd
 import ophyd.sim
+import ophyd.areadetector.common_plugins as plugins
 
 for cls, pvfn in [
         (plugins.CommonPlugins_V20, 'R2-0'),

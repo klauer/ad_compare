@@ -62,6 +62,8 @@ def get_prop_name(existing_class, pv):
         if exists:
             return exists[0]
 
+    pv = pv.replace(':', '_')
+
     # If it's all capital letters and underscores, then just convert
     # to lower-case and that's it
     m = re.match('^[A-Z0-9_]+$', pv)
@@ -174,7 +176,9 @@ def group_with_rbv(records, existing_class):
 
 
 def get_version_tuple(version):
-    return tuple(int(v) for v in version.lstrip('R').split('-'))
+    if '.' in version:
+        version = version.replace('.', '-')
+    return tuple(int(v) for v in version.lstrip('RrVv').split('-'))
 
 
 def get_version_string(version):
@@ -203,7 +207,7 @@ def get_class_name(existing_class, version, fn):
 
 
 def get_hierarchy_info(df, existing_class, version, last_info, record,
-                       rbv_info):
+                       rbv_info, renames):
     HierarchyInfo = collections.namedtuple('HierarchyInfo', 'record info rbv')
 
     if isinstance(record, tuple):
@@ -286,7 +290,8 @@ def find_per_version_records(existing_class, fn, renames):
                 continue
 
             hier_info = get_hierarchy_info(df, existing_class, version,
-                                           last_info, record, rbv_info)
+                                           last_info, record, rbv_info,
+                                           renames=renames)
 
             if hier_info is not None:
                 per_version_records[version][hier_info.record] = hier_info
