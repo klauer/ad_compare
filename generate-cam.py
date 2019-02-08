@@ -24,6 +24,7 @@ _fixes = {
     'maca_ddress': 'mac_address',
     'i_nterrupt': 'interrupt',
     'al_c': 'alc_',
+    'alc_b_est': 'alc_best',
     'eb_': 'e_',
     'em_icc': 'emi_cc',
     'adcs_peed': 'adc_speed',
